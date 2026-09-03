@@ -1,0 +1,6 @@
+{
+  "name": "Local Budget",
+  "description": "An iOS-friendly web/PWA spend tracker designed to keep your daily spending on track, calculate allowances, and safeguard your savings goals.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E1B4B" />
+      <stop offset="100%" stop-color="#2E1065" />
+    </linearGradient>
+    <linearGradient id="walletGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#C7B3ED" />
+      <stop offset="50%" stop-color="#AF98DE" />
+      <stop offset="100%" stop-color="#8B72C2" />
+    </linearGradient>
+    <radialGradient id="coinGrad" cx="40%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#FFF59D" />
+      <stop offset="50%" stop-color="#FFCA28" />
+      <stop offset="100%" stop-color="#FFA000" />
+    </radialGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#090615" flood-opacity="0.45" />
+    </filter>
+  </defs>
+
+  <!-- App Rounded Icon Canvas -->
+  <rect width="512" height="512" rx="115" fill="url(#bgGrad)" />
+
+  <!-- Subtle Circular Glow in background -->
+  <circle cx="256" cy="220" r="170" fill="#4338CA" opacity="0.3" />
+
+  <!-- Growth Analytics Bars in Background Right -->
+  <g transform="translate(40, -10)">
+    <rect x="280" y="220" width="34" height="65" rx="8" fill="#10B981" opacity="0.75" />
+    <rect x="330" y="175" width="34" height="110" rx="8" fill="#10B981" opacity="0.9" />
+    <rect x="380" y="130" width="34" height="155" rx="8" fill="#34D399" />
+    <!-- Upward Trend Line & Arrow -->
+    <path d="M 285 210 Q 340 150 395 110" fill="none" stroke="#6EE7B7" stroke-width="10" stroke-linecap="round" />
+    <polygon points="415,100 385,105 400,130" fill="#6EE7B7" />
+  </g>
+
+  <!-- 3D Lavender Wallet -->
+  <g filter="url(#shadow)">
+    <!-- Wallet Body -->
+    <rect x="90" y="160" width="250" height="190" rx="36" fill="url(#walletGrad)" />
+    <!-- Wallet Top Flap -->
+    <path d="M 90 200 L 340 200 L 340 240 L 90 240 Z" fill="#7E65B5" opacity="0.4" />
+    <!-- Wallet Stitching Lines -->
+    <rect x="102" y="172" width="226" height="166" rx="26" fill="none" stroke="#7E66B5" stroke-width="3" stroke-dasharray="8 6" opacity="0.65" />
+    <!-- Wallet Snap Strap -->
+    <rect x="270" y="225" width="80" height="60" rx="30" fill="#6D55A5" />
+    <!-- Metal Snap Button -->
+    <circle cx="310" cy="255" r="16" fill="#2E1C52" />
+    <circle cx="310" cy="255" r="7" fill="#C4B5FD" />
+  </g>
+
+  <!-- Golden Ghanaian Cedi Coin in Foreground -->
+  <g filter="url(#shadow)">
+    <circle cx="150" cy="350" r="75" fill="url(#coinGrad)" stroke="#FFB300" stroke-width="6" />
+    <circle cx="150" cy="350" r="63" fill="none" stroke="#FFA000" stroke-width="3" stroke-dasharray="5 3" />
+    <!-- Ghanaian Cedi Symbol ₵ -->
+    <!-- C arc -->
+    <path d="M 172 320 A 35 35 0 1 0 172 380" fill="none" stroke="#B45309" stroke-width="12" stroke-linecap="round" />
+    <!-- Vertical slash -->
+    <line x1="150" y1="298" x2="150" y2="402" stroke="#B45309" stroke-width="10" stroke-linecap="round" />
+  </g>
+</svg>
