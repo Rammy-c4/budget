@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BudgetProvider, useBudget } from './context/BudgetContext';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { SetupScreen } from './components/SetupScreen';
@@ -6,11 +6,23 @@ import { HomeScreen } from './components/HomeScreen';
 import { InsightsScreen } from './components/InsightsScreen';
 import { BottomNavBar } from './components/BottomNavBar';
 import { OfflineIndicator } from './components/OfflineIndicator';
+import { trackScreenView } from './lib/analytics';
 import { motion, AnimatePresence } from 'motion/react';
 
 const AppContent: React.FC = () => {
   const { stage, setStage, profile, saveBudgetProfile, activeTab, setActiveTab } = useBudget();
   const [pendingUserName, setPendingUserName] = useState('');
+
+  // Track anonymous screen views on navigation without attaching any personal data
+  useEffect(() => {
+    if (stage === 'WELCOME') {
+      trackScreenView('Welcome');
+    } else if (stage === 'SETUP') {
+      trackScreenView('Setup');
+    } else if (stage === 'MAIN') {
+      trackScreenView(activeTab === 'DAILY' ? 'Home' : 'Insights');
+    }
+  }, [stage, activeTab]);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans selection:bg-indigo-500 selection:text-white transition-colors">

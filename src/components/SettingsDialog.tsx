@@ -1,9 +1,10 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { BudgetProfile } from '../types';
 import { SpendingCalculator } from '../lib/calculator';
 import { useBudget } from '../context/BudgetContext';
 import { PWAInstallButton } from './PWAInstallButton';
 import { ThemeToggle } from './ThemeToggle';
+import { trackFeatureAction } from '../lib/analytics';
 import {
   AlertCircle,
   Bell,
@@ -50,6 +51,12 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
     message: string;
   } | null>(null);
 
+  useEffect(() => {
+    if (isOpen) {
+      trackFeatureAction('open_settings');
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const spendablePool = SpendingCalculator.calculateMonthlySpendable(
@@ -60,6 +67,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   const handleExport = () => {
     setBackupStatus(null);
     exportBackup();
+    trackFeatureAction('export_backup');
     setBackupStatus({
       type: 'success',
       message: 'Budget backup downloaded (.json). Keep it safe!',
@@ -81,6 +89,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
       if (typeof content === 'string') {
         const result = importBackup(content);
         if (result.success) {
+          trackFeatureAction('import_backup');
           setBackupStatus({
             type: 'success',
             message: 'Backup restored successfully!',
