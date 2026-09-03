@@ -11,8 +11,9 @@ LocalStorageManager.applyThemeToDOM(initialTheme);
 // Register Service Worker for offline PWA functionality
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
+    const swUrl = `${import.meta.env.BASE_URL}sw.js`;
     navigator.serviceWorker
-      .register('/sw.js')
+      .register(swUrl)
       .then((reg) => {
         console.log('Local Budget SW registered:', reg.scope);
       })

@@ -1,19 +1,28 @@
-const CACHE_NAME = 'local-budget-v2';
-const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon.svg',
-  '/apple-touch-icon.png',
-  '/pwa-192x192.png',
-  '/pwa-512x512.png',
-  '/pwa-maskable-512x512.png',
-];
+const CACHE_NAME = 'local-budget-v3';
 
 self.addEventListener('install', (event) => {
+  const scopePath = new URL(self.registration.scope).pathname;
+  const base = scopePath.endsWith('/') ? scopePath : `${scopePath}/`;
+  const assetsToCache = [
+    base,
+    `${base}index.html`,
+    `${base}manifest.json`,
+    `${base}icon.svg`,
+    `${base}apple-touch-icon.png`,
+    `${base}pwa-192x192.png`,
+    `${base}pwa-512x512.png`,
+    `${base}pwa-maskable-512x512.png`,
+  ];
+
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+    caches.open(CACHE_NAME).then(async (cache) => {
+      await Promise.allSettled(
+        assetsToCache.map((asset) =>
+          cache.add(asset).catch((err) => {
+            console.warn('[SW] Failed to pre-cache asset:', asset, err);
+          })
+        )
+      );
     })
   );
   self.skipWaiting();
@@ -49,8 +58,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navigation requests: Network first with offline cache fallback to index.html
+  // Navigation requests: Network first with offline cache fallback to index.html under base scope
   if (event.request.mode === 'navigate') {
+    const scopePath = new URL(self.registration.scope).pathname;
+    const base = scopePath.endsWith('/') ? scopePath : `${scopePath}/`;
+
     event.respondWith(
       fetch(event.request)
         .then((networkResponse) => {
@@ -60,7 +72,11 @@ self.addEventListener('fetch', (event) => {
           }
           return networkResponse;
         })
-        .catch(() => caches.match('/index.html'))
+        .catch(() =>
+          caches
+            .match(`${base}index.html`)
+            .then((res) => res || caches.match(base))
+        )
     );
     return;
   }
