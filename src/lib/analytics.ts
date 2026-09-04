@@ -74,6 +74,17 @@ export function initAnalytics(): void {
 
     activeMeasurementId = measurementId;
 
+    // Check if GA4 tag is already present in document (e.g. loaded via index.html)
+    const existingScript =
+      document.getElementById('ga4-gtag-script') ||
+      document.querySelector('script[src*="googletagmanager.com/gtag/js"]');
+
+    if (existingScript && typeof window.gtag === 'function') {
+      // Already configured and active via production index.html; avoid duplicate init
+      isInitialized = true;
+      return;
+    }
+
     // Initialize dataLayer and gtag dispatcher safely
     window.dataLayer = window.dataLayer || [];
     window.gtag = function gtag() {
