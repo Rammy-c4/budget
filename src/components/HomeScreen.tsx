@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useBudget } from '../context/BudgetContext';
-import { CATEGORIES, ExpenseItem } from '../types';
+import { CATEGORIES, ExpenseCategory, ExpenseItem } from '../types';
 import { SpendingCalculator } from '../lib/calculator';
 import { AddExpenseSheet } from './AddExpenseSheet';
 import { EditExpenseSheet } from './EditExpenseSheet';
@@ -11,7 +11,8 @@ import { EditNameDialog } from './EditNameDialog';
 import { ResetConfirmDialog } from './ResetConfirmDialog';
 import { ThemeToggle } from './ThemeToggle';
 import { AnimatedAmount } from './AnimatedAmount';
-import { motion } from 'motion/react';
+import { AnimatedEmoji, EmojiActionEvent } from './AnimatedEmoji';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   Calendar,
   CheckCircle2,
@@ -64,11 +65,56 @@ export const HomeScreen: React.FC<{ onOpenEditBudget: () => void }> = ({
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showEditNameDialog, setShowEditNameDialog] = useState(false);
   const [showResetConfirmDialog, setShowResetConfirmDialog] = useState(false);
+  const [lastEmojiAction, setLastEmojiAction] = useState<EmojiActionEvent | null>(null);
 
   if (!profile) return null;
 
   const currencySymbol = profile.currencySymbol;
   const isOverBudget = todayLeftToSpend < 0;
+
+  // Wrapped expense handlers to trigger reactive emoji character physics
+  const handleAddExpense = (
+    amount: number,
+    description: string,
+    timeFormatted: string,
+    category: ExpenseCategory
+  ) => {
+    addExpense(amount, description, timeFormatted, category);
+    setLastEmojiAction({
+      type: 'ADD',
+      expenseAmount: amount,
+      dailyAllowance: todayAllowance,
+      timestamp: Date.now(),
+    });
+  };
+
+  const handleUpdateExpense = (expense: ExpenseItem) => {
+    updateExpense(expense);
+    setLastEmojiAction({
+      type: 'EDIT',
+      expenseAmount: expense.amount,
+      dailyAllowance: todayAllowance,
+      timestamp: Date.now(),
+    });
+  };
+
+  const handleDeleteExpense = (id: number) => {
+    deleteExpense(id);
+    setLastEmojiAction({
+      type: 'DELETE',
+      dailyAllowance: todayAllowance,
+      timestamp: Date.now(),
+    });
+  };
+
+  const handleConfirmZeroSpend = () => {
+    confirmZeroSpend(yesterdayDateString);
+    setLastEmojiAction({
+      type: 'CELEBRATION',
+      dailyAllowance: todayAllowance,
+      timestamp: Date.now(),
+    });
+  };
 
   // Dynamic hero card styling based on mood
   const heroStyles = {
@@ -108,19 +154,21 @@ export const HomeScreen: React.FC<{ onOpenEditBudget: () => void }> = ({
   const spentPct = todayAllowance > 0 ? Math.min(100, Math.round((todayActualSpent / todayAllowance) * 100)) : 0;
 
   return (
-    <div className="min-h-screen bg-[#FBFBFE] dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors pb-[calc(env(safe-area-inset-bottom,0px)+6.5rem)]">
+    <div className="min-h-screen min-h-[100dvh] w-full bg-[#FBFBFE] dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors pb-[calc(env(safe-area-inset-bottom,0px)+7.5rem)]">
       {/* Top Bar */}
-      <header className="sticky top-0 z-20 backdrop-blur-md bg-white/80 dark:bg-slate-950/80 px-5 pt-[calc(env(safe-area-inset-top,0px)+0.875rem)] pb-3.5">
+      <header className="sticky top-0 z-20 backdrop-blur-md bg-white/80 dark:bg-slate-950/80 px-4 sm:px-5 pt-[calc(env(safe-area-inset-top,0px)+0.875rem)] pb-3.5 border-b border-slate-100/60 dark:border-slate-900/60">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <h1 className="text-lg font-black tracking-tight text-[#1E1B4B] dark:text-white">
-            Rammys Spend Tracker
+            Rammy&apos;s Spend Tracker
           </h1>
 
           <div className="flex items-center gap-1.5">
             {delayedExpenses.length > 0 && (
               <button
-                onClick={() => setShowDelayedSheet(true)}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/60 transition cursor-pointer"
+                onClick={() => {
+                  setShowDelayedSheet(true);
+                }}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/60 transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
                 title="View Delayed Expenses"
               >
                 <Hourglass className="w-3.5 h-3.5" />
@@ -131,8 +179,10 @@ export const HomeScreen: React.FC<{ onOpenEditBudget: () => void }> = ({
             <ThemeToggle />
 
             <button
-              onClick={() => setShowSettingsDialog(true)}
-              className="p-1.5 rounded-full text-[#1E1B4B] dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              onClick={() => {
+                setShowSettingsDialog(true);
+              }}
+              className="p-1.5 rounded-full text-[#1E1B4B] dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
               aria-label="Settings"
             >
               <Settings className="w-5 h-5" />
@@ -154,7 +204,7 @@ export const HomeScreen: React.FC<{ onOpenEditBudget: () => void }> = ({
             },
           },
         }}
-        className="max-w-md mx-auto px-5 pt-2 space-y-4"
+        className="max-w-md mx-auto px-4 sm:px-5 pt-2 space-y-4"
       >
         {/* 1. Greeting & Date Header */}
         <motion.div
@@ -170,7 +220,7 @@ export const HomeScreen: React.FC<{ onOpenEditBudget: () => void }> = ({
         >
           <div>
             <h2 className="text-xl font-black text-[#1E1B4B] dark:text-white tracking-tight">
-              Hello, {profile.userName.trim().toLowerCase() || 'rammy'} 👋
+              Hello, {profile.userName.trim() || 'friend'} 👋
             </h2>
             <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">
               {todayFormatted}
@@ -180,7 +230,7 @@ export const HomeScreen: React.FC<{ onOpenEditBudget: () => void }> = ({
           <motion.button
             whileTap={{ scale: 0.94 }}
             onClick={() => setShowEditNameDialog(true)}
-            className="w-9 h-9 rounded-full bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-[#1E1B4B] dark:text-indigo-200 font-bold text-sm shadow-2xs hover:scale-105 transition cursor-pointer"
+            className="w-9 h-9 rounded-full bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-[#1E1B4B] dark:text-indigo-200 font-bold text-sm shadow-2xs hover:scale-105 transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             title="Edit User Name"
           >
             {profile.userName.trim().charAt(0).toUpperCase() || 'R'}
@@ -197,7 +247,9 @@ export const HomeScreen: React.FC<{ onOpenEditBudget: () => void }> = ({
               transition: { duration: 0.28, ease: [0.25, 1, 0.5, 1] },
             },
           }}
-          className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-indigo-100/90 dark:border-indigo-950 shadow-xs space-y-4"
+          whileHover={{ y: -2 }}
+          transition={{ duration: 0.2 }}
+          className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-indigo-100/90 dark:border-slate-800 shadow-xs space-y-4"
         >
           {/* Card Top Row */}
           <div className="flex items-center justify-between">
@@ -215,14 +267,28 @@ export const HomeScreen: React.FC<{ onOpenEditBudget: () => void }> = ({
 
           {/* Emoji Avatar & Recommended Today Amount */}
           <div className="text-center py-1">
-            <div className="w-20 h-20 rounded-full border border-indigo-100 dark:border-indigo-900/60 bg-indigo-50/50 dark:bg-indigo-950/40 flex items-center justify-center text-4xl mx-auto shadow-2xs mb-3">
-              {spendingMood.emoji}
-            </div>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.94 }}
+              onClick={() => {
+                setLastEmojiAction({ type: 'TOUCH', timestamp: Date.now() });
+              }}
+              className="w-24 h-24 rounded-full border border-indigo-100/90 dark:border-indigo-900/60 bg-gradient-to-b from-indigo-50/70 to-indigo-100/30 dark:from-indigo-950/60 dark:to-indigo-900/30 flex items-center justify-center mx-auto shadow-xs mb-3 relative overflow-visible cursor-pointer select-none"
+              title="Tap your budget mascot for a playful reaction!"
+            >
+              <AnimatedEmoji
+                emoji={spendingMood?.emoji || '✨'}
+                moodType={spendingMood?.type || 'ON_TRACK'}
+                actionEvent={lastEmojiAction}
+                sizeClassName="text-[48px] sm:text-[54px] leading-none"
+              />
+            </motion.div>
 
             <AnimatedAmount
               amount={todayLeftToSpend}
               currencySymbol={currencySymbol}
               isOverBudget={isOverBudget}
+              actionTrigger={lastEmojiAction?.timestamp}
               className={`text-4xl font-black tracking-tight block ${
                 isOverBudget
                   ? 'text-rose-600 dark:text-rose-400'
@@ -235,8 +301,33 @@ export const HomeScreen: React.FC<{ onOpenEditBudget: () => void }> = ({
             </span>
           </div>
 
+          {/* 3. Animated Daily Progress Indicator (Animates from 0% -> actual value with smooth easing) */}
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800/70 space-y-1.5">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+              <span>Daily used</span>
+              <span className="tabular-nums font-bold text-slate-700 dark:text-slate-300">
+                {spentPct}% ({currencySymbol}{SpendingCalculator.formatExactDecimal(todayActualSpent)} / {currencySymbol}{SpendingCalculator.formatExactDecimal(todayAllowance)})
+              </span>
+            </div>
+
+            <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(100, Math.max(spentPct > 0 ? 2 : 0, spentPct))}%` }}
+                transition={{ duration: 0.65, ease: [0.25, 1, 0.5, 1] }}
+                className={`h-full rounded-full ${
+                  isOverBudget
+                    ? 'bg-rose-500'
+                    : spentPct > 80
+                    ? 'bg-amber-500'
+                    : 'bg-indigo-600 dark:bg-indigo-500'
+                }`}
+              />
+            </div>
+          </div>
+
           {/* Bottom Motivational Quote */}
-          <p className="text-xs text-slate-500 dark:text-slate-400 text-center font-normal pt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 text-center font-normal pt-0.5">
             &ldquo;{spendingMood.headline || spendingMood.message || "You're ahead of your savings goal!"}&rdquo;
           </p>
         </motion.div>
@@ -255,8 +346,10 @@ export const HomeScreen: React.FC<{ onOpenEditBudget: () => void }> = ({
           <motion.button
             whileTap={{ scale: 0.97 }}
             transition={{ duration: 0.12 }}
-            onClick={() => setShowAddSheet(true)}
-            className="w-full py-4 rounded-2xl bg-[#120E3D] hover:bg-[#1a1554] dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-bold text-sm shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
+            onClick={() => {
+              setShowAddSheet(true);
+            }}
+            className="w-full py-4 rounded-2xl bg-[#120E3D] hover:bg-[#1a1554] dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-bold text-sm shadow-md transition flex items-center justify-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950"
           >
             <Plus className="w-5 h-5" />
             <span>Add Expense</span>
@@ -313,7 +406,7 @@ export const HomeScreen: React.FC<{ onOpenEditBudget: () => void }> = ({
 
             <motion.button
               whileTap={{ scale: 0.96 }}
-              onClick={() => confirmZeroSpend(yesterdayDateString)}
+              onClick={handleConfirmZeroSpend}
               className="px-3 py-1.5 rounded-xl bg-[#120E3D] hover:bg-indigo-900 text-white text-xs font-bold transition cursor-pointer"
             >
               No spending yesterday 🎉
@@ -341,7 +434,9 @@ export const HomeScreen: React.FC<{ onOpenEditBudget: () => void }> = ({
             {todayExpenses.length > 0 && (
               <motion.button
                 whileTap={{ scale: 0.95 }}
-                onClick={() => setShowBreakdownSheet(true)}
+                onClick={() => {
+                  setShowBreakdownSheet(true);
+                }}
                 className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 transition cursor-pointer"
               >
                 <PieChart className="w-3.5 h-3.5" />
@@ -362,45 +457,61 @@ export const HomeScreen: React.FC<{ onOpenEditBudget: () => void }> = ({
             </div>
           ) : (
             <div className="space-y-2">
-              {todayExpenses.map((expense) => {
-                const meta = CATEGORIES[expense.category] || CATEGORIES.OTHER;
+              <AnimatePresence mode="popLayout" initial={false}>
+                {todayExpenses.map((expense) => {
+                  const meta = CATEGORIES[expense.category] || CATEGORIES.OTHER;
 
-                return (
-                  <motion.div
-                    whileTap={{ scale: 0.98 }}
-                    transition={{ duration: 0.1 }}
-                    key={expense.id}
-                    onClick={() => setSelectedExpenseForEdit(expense)}
-                    className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-2xs hover:border-indigo-200 transition flex items-center justify-between cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
-                        style={{ backgroundColor: meta.lightBg }}
-                      >
-                        {meta.emoji}
-                      </div>
-                      <div className="min-w-0">
-                        <h4 className="text-xs font-bold text-slate-900 dark:text-white leading-tight truncate">
-                          {expense.description}
-                        </h4>
-                        <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5">
-                          <span className="truncate">{meta.displayName}</span>
-                          <span>•</span>
-                          <span className="shrink-0">{expense.timeFormatted}</span>
+                  return (
+                    <motion.div
+                      layout
+                      initial={{ opacity: 0, y: -12, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{
+                        opacity: 0,
+                        x: -36,
+                        scale: 0.92,
+                        transition: { duration: 0.24, ease: [0.32, 0, 0.67, 0] },
+                      }}
+                      transition={{
+                        layout: { duration: 0.28, ease: [0.25, 1, 0.5, 1] },
+                      }}
+                      whileHover={{ y: -1, scale: 1.005 }}
+                      whileTap={{ scale: 0.98 }}
+                      key={expense.id}
+                      onClick={() => {
+                        setSelectedExpenseForEdit(expense);
+                      }}
+                      className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-2xs hover:border-indigo-200 dark:hover:border-slate-700 transition flex items-center justify-between cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
+                          style={{ backgroundColor: meta.lightBg }}
+                        >
+                          {meta.emoji}
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-xs font-bold text-slate-900 dark:text-white leading-tight truncate">
+                            {expense.description}
+                          </h4>
+                          <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5">
+                            <span className="truncate">{meta.displayName}</span>
+                            <span>•</span>
+                            <span className="shrink-0">{expense.timeFormatted}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                      <span className="text-sm font-black text-slate-900 dark:text-white whitespace-nowrap">
-                        {currencySymbol}{SpendingCalculator.formatExactDecimal(expense.amount)}
-                      </span>
-                      <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0" />
-                    </div>
-                  </motion.div>
-                );
-              })}
+                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                        <span className="text-sm font-black text-slate-900 dark:text-white whitespace-nowrap">
+                          {currencySymbol}{SpendingCalculator.formatExactDecimal(expense.amount)}
+                        </span>
+                        <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0" />
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
             </div>
           )}
         </motion.div>
@@ -411,7 +522,7 @@ export const HomeScreen: React.FC<{ onOpenEditBudget: () => void }> = ({
         currencySymbol={currencySymbol}
         isOpen={showAddSheet}
         onClose={() => setShowAddSheet(false)}
-        onAdd={addExpense}
+        onAdd={handleAddExpense}
       />
 
       <EditExpenseSheet
@@ -419,9 +530,9 @@ export const HomeScreen: React.FC<{ onOpenEditBudget: () => void }> = ({
         currencySymbol={currencySymbol}
         isOpen={!!selectedExpenseForEdit}
         onClose={() => setSelectedExpenseForEdit(null)}
-        onSave={updateExpense}
+        onSave={handleUpdateExpense}
         onDelay={delayExpense}
-        onDelete={deleteExpense}
+        onDelete={handleDeleteExpense}
       />
 
       <BreakdownSheet

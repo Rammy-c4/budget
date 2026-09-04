@@ -1,5 +1,6 @@
 import React from 'react';
 import { AppNavTab } from '../types';
+import { motion } from 'motion/react';
 
 interface BottomNavBarProps {
   activeTab: AppNavTab;
@@ -10,23 +11,41 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
   activeTab,
   onChangeTab,
 }) => {
+  const handleTabClick = (tab: AppNavTab) => {
+    onChangeTab(tab);
+  };
+
   return (
     <nav
       aria-label="Bottom Navigation"
       className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-slate-100 dark:border-slate-800/80 transition-colors"
     >
-      <div className="max-w-md mx-auto px-6 pt-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.625rem)] flex items-center justify-around">
+      <div className="max-w-md mx-auto px-4 sm:px-6 pt-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.625rem)] flex items-center justify-around">
         {/* Daily Tab */}
-        <button
-          onClick={() => onChangeTab('DAILY')}
-          className="flex flex-col items-center gap-1 py-1 px-5 rounded-2xl transition cursor-pointer group active:scale-95"
+        <motion.button
+          whileTap={{ scale: 0.92 }}
+          onClick={() => handleTabClick('DAILY')}
+          className="relative flex flex-col items-center gap-1 min-w-[76px] min-h-[48px] py-1.5 px-4 sm:px-6 rounded-2xl cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           aria-label="Daily spending tab"
         >
-          <div
-            className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all ${
-              activeTab === 'DAILY'
-                ? 'bg-indigo-50/80 dark:bg-indigo-950/60 shadow-2xs scale-105'
-                : 'opacity-70 group-hover:opacity-100'
+          {activeTab === 'DAILY' && (
+            <motion.div
+              layoutId="nav-active-pill"
+              transition={{ type: 'spring', stiffness: 500, damping: 36 }}
+              className="absolute inset-0 bg-indigo-50/80 dark:bg-indigo-950/60 rounded-2xl -z-10 shadow-2xs"
+            />
+          )}
+
+          <motion.div
+            animate={{
+              scale: activeTab === 'DAILY' ? [1, 1.15, 0.98, 1.02] : 0.94,
+            }}
+            transition={{
+              duration: 0.36,
+              ease: [0.25, 1, 0.5, 1],
+            }}
+            className={`w-9 h-9 flex items-center justify-center rounded-xl transition-opacity transform-gpu ${
+              activeTab === 'DAILY' ? 'opacity-100' : 'opacity-65 group-hover:opacity-100'
             }`}
           >
             {/* 3D House SVG */}
@@ -59,29 +78,43 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
               <rect x="9" y="18" width="4" height="4" rx="1" fill="#BAE6FD" stroke="#0284C7" strokeWidth="0.8" />
               <rect x="23" y="18" width="4" height="4" rx="1" fill="#BAE6FD" stroke="#0284C7" strokeWidth="0.8" />
             </svg>
-          </div>
+          </motion.div>
           <span
-            className={`text-[11px] font-bold transition-colors ${
+            className={`text-[11px] transition-colors ${
               activeTab === 'DAILY'
                 ? 'text-indigo-950 dark:text-indigo-300 font-extrabold'
-                : 'text-slate-400 dark:text-slate-500'
+                : 'text-slate-500 dark:text-slate-400 font-semibold'
             }`}
           >
             Daily
           </span>
-        </button>
+        </motion.button>
 
         {/* Insights Tab */}
-        <button
-          onClick={() => onChangeTab('INSIGHTS')}
-          className="flex flex-col items-center gap-1 py-1 px-5 rounded-2xl transition cursor-pointer group active:scale-95"
+        <motion.button
+          whileTap={{ scale: 0.92 }}
+          onClick={() => handleTabClick('INSIGHTS')}
+          className="relative flex flex-col items-center gap-1 min-w-[76px] min-h-[48px] py-1.5 px-4 sm:px-6 rounded-2xl cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           aria-label="Insights analytics tab"
         >
-          <div
-            className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all ${
-              activeTab === 'INSIGHTS'
-                ? 'bg-indigo-50/80 dark:bg-indigo-950/60 shadow-2xs scale-105'
-                : 'opacity-70 group-hover:opacity-100'
+          {activeTab === 'INSIGHTS' && (
+            <motion.div
+              layoutId="nav-active-pill"
+              transition={{ type: 'spring', stiffness: 500, damping: 36 }}
+              className="absolute inset-0 bg-indigo-50/80 dark:bg-indigo-950/60 rounded-2xl -z-10 shadow-2xs"
+            />
+          )}
+
+          <motion.div
+            animate={{
+              scale: activeTab === 'INSIGHTS' ? [1, 1.15, 0.98, 1.02] : 0.94,
+            }}
+            transition={{
+              duration: 0.36,
+              ease: [0.25, 1, 0.5, 1],
+            }}
+            className={`w-9 h-9 flex items-center justify-center rounded-xl transition-opacity transform-gpu ${
+              activeTab === 'INSIGHTS' ? 'opacity-100' : 'opacity-65 group-hover:opacity-100'
             }`}
           >
             {/* 3D Bar Chart SVG */}
@@ -113,17 +146,17 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
               {/* Bar 4 (Yellow) */}
               <rect x="26.5" y="14" width="4.5" height="16" rx="1.5" fill="url(#barYellow)" />
             </svg>
-          </div>
+          </motion.div>
           <span
-            className={`text-[11px] font-bold transition-colors ${
+            className={`text-[11px] transition-colors ${
               activeTab === 'INSIGHTS'
                 ? 'text-indigo-950 dark:text-indigo-300 font-extrabold'
-                : 'text-slate-400 dark:text-slate-500'
+                : 'text-slate-500 dark:text-slate-400 font-semibold'
             }`}
           >
             Insights
           </span>
-        </button>
+        </motion.button>
       </div>
     </nav>
   );

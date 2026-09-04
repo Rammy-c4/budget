@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { SpendingCalculator } from '../lib/calculator';
+import { motion } from 'motion/react';
 
 interface AnimatedAmountProps {
   amount: number;
   currencySymbol: string;
   isOverBudget: boolean;
   className?: string;
+  actionTrigger?: number; // Optional timestamp/trigger to sync pop with expense actions
 }
 
 export const AnimatedAmount: React.FC<AnimatedAmountProps> = ({
@@ -13,8 +15,10 @@ export const AnimatedAmount: React.FC<AnimatedAmountProps> = ({
   currencySymbol,
   isOverBudget,
   className = '',
+  actionTrigger,
 }) => {
   const [displayAmount, setDisplayAmount] = useState<number>(amount);
+  const [popKey, setPopKey] = useState(0);
   const displayAmountRef = useRef<number>(amount);
   const prevTargetRef = useRef<number>(amount);
   const rafRef = useRef<number | null>(null);
@@ -22,6 +26,13 @@ export const AnimatedAmount: React.FC<AnimatedAmountProps> = ({
   useEffect(() => {
     displayAmountRef.current = displayAmount;
   }, [displayAmount]);
+
+  // Synchronized pop on action trigger (e.g. expense added or updated)
+  useEffect(() => {
+    if (actionTrigger) {
+      setPopKey((k) => k + 1);
+    }
+  }, [actionTrigger]);
 
   useEffect(() => {
     const startVal = displayAmountRef.current;
@@ -32,6 +43,8 @@ export const AnimatedAmount: React.FC<AnimatedAmountProps> = ({
       prevTargetRef.current = targetVal;
       return;
     }
+
+    setPopKey((k) => k + 1);
 
     // Check prefers-reduced-motion
     const prefersReducedMotion =
@@ -44,8 +57,8 @@ export const AnimatedAmount: React.FC<AnimatedAmountProps> = ({
       return;
     }
 
-    // Animate smoothly from startVal to targetVal over ~420ms
-    const duration = 420;
+    // Animate smoothly from startVal to targetVal over ~460ms using Apple-style cubic ease out
+    const duration = 460;
     const startTime = performance.now();
 
     if (rafRef.current) {
@@ -55,8 +68,8 @@ export const AnimatedAmount: React.FC<AnimatedAmountProps> = ({
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(1, elapsed / duration);
-      // Apple-style standard cubic ease out
-      const ease = 1 - Math.pow(1 - progress, 3);
+      // Quintic ease out for silky smooth number settling
+      const ease = 1 - Math.pow(1 - progress, 4);
       const current = startVal + (targetVal - startVal) * ease;
 
       setDisplayAmount(current);
@@ -80,10 +93,23 @@ export const AnimatedAmount: React.FC<AnimatedAmountProps> = ({
   }, [amount]);
 
   return (
-    <span className={className}>
+    <motion.span
+      key={popKey}
+      animate={{
+        scale: [1, 1.07, 0.98, 1],
+        y: [0, -4, 1, 0],
+      }}
+      transition={{
+        duration: 0.52,
+        ease: [0.25, 1, 0.5, 1],
+      }}
+      className={`${className} tabular-nums whitespace-nowrap inline-block transform-gpu`}
+    >
       {isOverBudget ? '-' : ''}
       {currencySymbol}
       {SpendingCalculator.formatExactDecimal(Math.abs(displayAmount))}
-    </span>
+    </motion.span>
   );
 };
+
+

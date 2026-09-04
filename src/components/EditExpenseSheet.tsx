@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { CATEGORIES, ExpenseCategory, ExpenseItem } from '../types';
 import { Clock, Hourglass, Trash2, X } from 'lucide-react';
+import { motion } from 'motion/react';
 
 interface EditExpenseSheetProps {
   expense: ExpenseItem | null;
@@ -40,7 +41,9 @@ export const EditExpenseSheet: React.FC<EditExpenseSheetProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const num = parseFloat(amountInput);
-    if (isNaN(num) || num <= 0) return;
+    if (isNaN(num) || num <= 0) {
+      return;
+    }
 
     onSave({
       ...expense,
@@ -53,9 +56,13 @@ export const EditExpenseSheet: React.FC<EditExpenseSheetProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto overscroll-contain"
+    >
       <div
-        className="w-full max-w-md bg-white dark:bg-slate-900 rounded-t-3xl shadow-2xl border-t border-slate-200 dark:border-slate-800 p-5 pb-[calc(env(safe-area-inset-bottom,0px)+2rem)] space-y-4 animate-in slide-in-from-bottom duration-300 max-h-[92vh] overflow-y-auto"
+        className="w-full max-w-md bg-white dark:bg-slate-900 rounded-t-3xl shadow-2xl border-t border-slate-200 dark:border-slate-800 p-5 pb-[calc(env(safe-area-inset-bottom,0px)+2rem)] space-y-4 animate-in slide-in-from-bottom duration-300 max-h-[min(92vh,90dvh)] sm:max-h-[88vh] overflow-y-auto overscroll-contain touch-pan-y"
+        style={{ WebkitOverflowScrolling: 'touch' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-2" />
@@ -66,7 +73,8 @@ export const EditExpenseSheet: React.FC<EditExpenseSheetProps> = ({
           </h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+            className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            aria-label="Close sheet"
           >
             <X className="w-5 h-5" />
           </button>
@@ -129,8 +137,10 @@ export const EditExpenseSheet: React.FC<EditExpenseSheetProps> = ({
                   <button
                     key={catKey}
                     type="button"
-                    onClick={() => setCategory(catKey)}
-                    className={`flex items-center gap-1.5 p-2.5 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                    onClick={() => {
+                      setCategory(catKey);
+                    }}
+                    className={`flex items-center gap-1.5 p-2.5 rounded-xl text-xs font-bold border transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                       isSelected
                         ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
                         : 'bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700/80 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -163,38 +173,41 @@ export const EditExpenseSheet: React.FC<EditExpenseSheetProps> = ({
           </div>
 
           {/* Save Button */}
-          <button
+          <motion.button
+            whileTap={{ scale: 0.98 }}
             type="submit"
-            className="w-full py-3.5 rounded-2xl bg-indigo-950 hover:bg-indigo-900 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-bold text-sm shadow-md active:scale-[0.98] transition cursor-pointer"
+            className="w-full py-3.5 rounded-2xl bg-indigo-950 hover:bg-indigo-900 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-bold text-sm shadow-md transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
           >
             Save Changes
-          </button>
+          </motion.button>
 
           {/* Extra Actions: Delay & Delete */}
           <div className="grid grid-cols-2 gap-2.5 pt-1">
-            <button
+            <motion.button
+              whileTap={{ scale: 0.96 }}
               type="button"
               onClick={() => {
                 onDelay(expense.id);
                 onClose();
               }}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl border border-amber-300 dark:border-amber-800/60 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 text-xs font-bold transition cursor-pointer"
+              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl border border-amber-300 dark:border-amber-800/60 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 text-xs font-bold transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
             >
               <Hourglass className="w-3.5 h-3.5" />
               <span>Delay Expense</span>
-            </button>
+            </motion.button>
 
-            <button
+            <motion.button
+              whileTap={{ scale: 0.96 }}
               type="button"
               onClick={() => {
                 onDelete(expense.id);
                 onClose();
               }}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl border border-red-300 dark:border-red-800/60 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 text-xs font-bold transition cursor-pointer"
+              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl border border-red-300 dark:border-red-800/60 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 text-xs font-bold transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span>Delete</span>
-            </button>
+            </motion.button>
           </div>
         </form>
       </div>

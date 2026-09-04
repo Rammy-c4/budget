@@ -65,7 +65,7 @@ export const PWAInstallButton: React.FC<{ minimal?: boolean }> = ({ minimal = fa
       {minimal ? (
         <button
           onClick={handleInstallClick}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:text-indigo-300 dark:hover:bg-indigo-900/60 transition active:scale-95"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:text-indigo-300 dark:hover:bg-indigo-900/60 transition active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           title="Install App"
         >
           <Download className="w-3.5 h-3.5" />
@@ -74,7 +74,7 @@ export const PWAInstallButton: React.FC<{ minimal?: boolean }> = ({ minimal = fa
       ) : (
         <button
           onClick={handleInstallClick}
-          className="w-full flex items-center justify-between p-3 rounded-2xl bg-indigo-50/80 hover:bg-indigo-100/80 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 border border-indigo-200/60 dark:border-indigo-800/40 text-left transition active:scale-[0.99]"
+          className="w-full flex items-center justify-between p-3 rounded-2xl bg-indigo-50/80 hover:bg-indigo-100/80 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 border border-indigo-200/60 dark:border-indigo-800/40 text-left transition active:scale-[0.99] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
         >
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-sm">

@@ -115,9 +115,13 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-black/60 backdrop-blur-xs p-4 flex min-h-full items-center justify-center animate-in fade-in duration-200"
+    >
       <div
-        className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+        className="w-full max-w-sm my-auto bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4 animate-in zoom-in-95 duration-200 max-h-[min(90vh,90dvh)] overflow-y-auto overscroll-contain touch-pan-y"
+        style={{ WebkitOverflowScrolling: 'touch' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -134,7 +138,8 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
             <ThemeToggle />
             <button
               onClick={onClose}
-              className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+              className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              aria-label="Close settings"
             >
               <X className="w-5 h-5" />
             </button>
@@ -158,7 +163,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
           </div>
           <button
             onClick={onOpenEditName}
-            className="text-xs font-bold text-indigo-700 dark:text-indigo-300 hover:underline px-2 py-1 transition cursor-pointer"
+            className="text-xs font-bold text-indigo-700 dark:text-indigo-300 hover:underline px-2 py-1 transition cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           >
             Edit
           </button>
@@ -212,7 +217,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
 
           <button
             onClick={() => onToggleReminder(!dailyReminderEnabled)}
-            className={`w-12 h-6.5 flex items-center rounded-full p-1 transition-colors cursor-pointer ${
+            className={`w-12 h-6.5 flex items-center rounded-full p-1 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
               dailyReminderEnabled ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'
             }`}
             aria-label="Toggle daily reminder"
@@ -275,7 +280,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
               type="button"
               onClick={handleExport}
               id="export-backup-button"
-              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700/80 transition active:scale-[0.98] cursor-pointer shadow-xs"
+              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700/80 transition active:scale-[0.98] cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             >
               <Download className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
               <span>Export Backup</span>
@@ -285,7 +290,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
               type="button"
               onClick={handleImportClick}
               id="import-backup-button"
-              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700/80 transition active:scale-[0.98] cursor-pointer shadow-xs"
+              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700/80 transition active:scale-[0.98] cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             >
               <Upload className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
               <span>Import Backup</span>
@@ -307,7 +312,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         <div className="space-y-2 pt-1">
           <button
             onClick={onOpenEditBudget}
-            className="w-full flex items-center justify-between p-3 rounded-2xl bg-indigo-950 hover:bg-indigo-900 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white text-xs font-bold shadow-sm transition active:scale-[0.98] cursor-pointer"
+            className="w-full flex items-center justify-between p-3 rounded-2xl bg-indigo-950 hover:bg-indigo-900 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white text-xs font-bold shadow-sm transition active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
           >
             <div className="flex items-center gap-2">
               <Sliders className="w-4 h-4" />
@@ -318,7 +323,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
 
           <button
             onClick={onOpenResetConfirm}
-            className="w-full flex items-center justify-center gap-1.5 p-3 rounded-2xl border border-red-300 dark:border-red-900/60 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 text-xs font-bold transition active:scale-[0.98] cursor-pointer"
+            className="w-full flex items-center justify-center gap-1.5 p-3 rounded-2xl border border-red-300 dark:border-red-900/60 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 text-xs font-bold transition active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>Reset All Data</span>
@@ -327,7 +332,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
 
         <button
           onClick={onClose}
-          className="w-full py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-bold text-xs transition cursor-pointer"
+          className="w-full py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-bold text-xs transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
         >
           Done
         </button>

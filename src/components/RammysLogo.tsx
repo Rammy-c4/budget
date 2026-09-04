@@ -1,26 +1,80 @@
 import React from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+
+export type LogoSwallowPhase = 'IDLE' | 'ANTICIPATE' | 'SWALLOW' | 'PULSE' | 'CELEBRATE';
 
 interface RammysLogoProps {
   size?: number;
   showBrandingText?: boolean;
   className?: string;
+  swallowPhase?: LogoSwallowPhase;
 }
 
 export const RammysLogo: React.FC<RammysLogoProps> = ({
   size = 180,
   showBrandingText = true,
   className = '',
+  swallowPhase = 'IDLE',
 }) => {
+  const isAnticipating = swallowPhase === 'ANTICIPATE';
+  const isSwallowing = swallowPhase === 'SWALLOW';
+  const isPulsing = swallowPhase === 'PULSE' || swallowPhase === 'CELEBRATE';
+
   return (
-    <div
+    <motion.div
+      animate={
+        isSwallowing
+          ? {
+              scaleX: [1, 1.22, 0.9, 1.08, 1],
+              scaleY: [1, 0.8, 1.18, 0.94, 1],
+              rotate: [0, -3, 3, -1, 0],
+            }
+          : isAnticipating
+          ? {
+              scale: [1, 1.06, 1.04],
+              y: [0, -4, -2],
+            }
+          : isPulsing
+          ? {
+              scale: [1, 1.1, 1],
+              y: [0, -3, 0],
+            }
+          : { scale: 1, y: 0 }
+      }
+      transition={{
+        duration: isSwallowing ? 0.45 : isAnticipating ? 0.4 : 0.35,
+        ease: [0.25, 1, 0.5, 1],
+      }}
       className={`relative inline-flex items-center justify-center select-none ${className}`}
       style={{ width: size, height: size }}
     >
+      {/* Expanding Ripple Shockwave on Pulse / Swallow */}
+      <AnimatePresence>
+        {isPulsing && (
+          <>
+            <motion.div
+              initial={{ scale: 0.7, opacity: 0.85 }}
+              animate={{ scale: 2.1, opacity: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.75, ease: 'easeOut' }}
+              className="absolute inset-0 rounded-[44px] border-2 border-indigo-400 dark:border-indigo-300 pointer-events-none"
+            />
+            <motion.div
+              initial={{ scale: 0.6, opacity: 0.9 }}
+              animate={{ scale: 1.65, opacity: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.6, delay: 0.08, ease: 'easeOut' }}
+              className="absolute inset-0 rounded-[44px] bg-gradient-to-r from-amber-400/30 to-indigo-500/30 blur-md pointer-events-none"
+            />
+          </>
+        )}
+      </AnimatePresence>
+
       <svg
         viewBox="0 0 200 200"
         width={size}
         height={size}
-        className="w-full h-full drop-shadow-xl"
+        className="w-full h-full drop-shadow-xl overflow-visible"
       >
         <defs>
           <linearGradient id="logoBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -73,6 +127,41 @@ export const RammysLogo: React.FC<RammysLogoProps> = ({
           <rect x="54" y="58" width="88" height="68" rx="14" fill="url(#logoWalletGrad)" />
           {/* Top flap */}
           <rect x="54" y="70" width="88" height="16" fill="#8B72C2" opacity="0.35" />
+
+          {/* Dynamic Absorption Aperture / Suction Aura */}
+          {(isAnticipating || isSwallowing) && (
+            <g>
+              <ellipse
+                cx="98"
+                cy="74"
+                rx={isSwallowing ? '26' : '16'}
+                ry={isSwallowing ? '14' : '8'}
+                fill="#F59E0B"
+                opacity={isSwallowing ? '0.85' : '0.55'}
+              />
+              <ellipse
+                cx="98"
+                cy="74"
+                rx={isSwallowing ? '14' : '8'}
+                ry={isSwallowing ? '7' : '4'}
+                fill="#FFFFFF"
+                opacity="0.9"
+              />
+            </g>
+          )}
+
+          {/* Celebration Light Sparkle on Pulse */}
+          {isPulsing && (
+            <g>
+              <circle cx="98" cy="74" r="14" fill="#FFFFFF" opacity="0.75" />
+              <path
+                d="M 98 52 L 101 69 L 118 74 L 101 79 L 98 96 L 95 79 L 78 74 L 95 69 Z"
+                fill="#FDE047"
+                opacity="0.95"
+              />
+            </g>
+          )}
+
           {/* Stitching */}
           <rect
             x="58"
@@ -146,6 +235,6 @@ export const RammysLogo: React.FC<RammysLogoProps> = ({
           </g>
         )}
       </svg>
-    </div>
+    </motion.div>
   );
 };

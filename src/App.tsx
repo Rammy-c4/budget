@@ -6,12 +6,14 @@ import { HomeScreen } from './components/HomeScreen';
 import { InsightsScreen } from './components/InsightsScreen';
 import { BottomNavBar } from './components/BottomNavBar';
 import { OfflineIndicator } from './components/OfflineIndicator';
+import { AppOpeningScreen } from './components/AppOpeningScreen';
 import { trackScreenView } from './lib/analytics';
 import { motion, AnimatePresence } from 'motion/react';
 
 const AppContent: React.FC = () => {
   const { stage, setStage, profile, saveBudgetProfile, activeTab, setActiveTab } = useBudget();
   const [pendingUserName, setPendingUserName] = useState('');
+  const [showOpening, setShowOpening] = useState(true);
 
   // Track anonymous screen views on navigation without attaching any personal data
   useEffect(() => {
@@ -25,17 +27,20 @@ const AppContent: React.FC = () => {
   }, [stage, activeTab]);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans selection:bg-indigo-500 selection:text-white transition-colors">
+    <div className="min-h-screen min-h-[100dvh] w-full bg-slate-50 dark:bg-slate-950 font-sans selection:bg-indigo-500 selection:text-white transition-colors">
       <OfflineIndicator />
+
+      {/* 1. App Opening Animation */}
+      {showOpening && <AppOpeningScreen onComplete={() => setShowOpening(false)} />}
 
       <AnimatePresence mode="wait">
         {stage === 'WELCOME' && (
           <motion.div
             key="welcome-stage"
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.24, ease: [0.25, 1, 0.5, 1] }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
           >
             <WelcomeScreen
               onContinue={(name) => {
@@ -49,10 +54,10 @@ const AppContent: React.FC = () => {
         {stage === 'SETUP' && (
           <motion.div
             key="setup-stage"
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.22, ease: [0.25, 1, 0.5, 1] }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
           >
             <SetupScreen
               initialUserName={pendingUserName || profile?.userName}
@@ -69,29 +74,29 @@ const AppContent: React.FC = () => {
         {stage === 'MAIN' && (
           <motion.div
             key="main-stage"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
           >
             <AnimatePresence mode="wait">
               {activeTab === 'DAILY' ? (
                 <motion.div
                   key="daily-tab"
-                  initial={{ opacity: 0, x: -8 }}
+                  initial={{ opacity: 0, x: -6 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 8 }}
-                  transition={{ duration: 0.18, ease: [0.25, 1, 0.5, 1] }}
+                  exit={{ opacity: 0, x: 6 }}
+                  transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
                 >
                   <HomeScreen onOpenEditBudget={() => setStage('SETUP')} />
                 </motion.div>
               ) : (
                 <motion.div
                   key="insights-tab"
-                  initial={{ opacity: 0, x: 8 }}
+                  initial={{ opacity: 0, x: 6 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -8 }}
-                  transition={{ duration: 0.18, ease: [0.25, 1, 0.5, 1] }}
+                  exit={{ opacity: 0, x: -6 }}
+                  transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
                 >
                   <InsightsScreen />
                 </motion.div>

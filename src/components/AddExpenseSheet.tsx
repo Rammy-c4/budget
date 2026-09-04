@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { CATEGORIES, ExpenseCategory } from '../types';
 import { SpendingCalculator } from '../lib/calculator';
 import { Clock, Plus, Tag, X } from 'lucide-react';
+import { motion } from 'motion/react';
 
 interface AddExpenseSheetProps {
   currencySymbol: string;
@@ -71,9 +72,13 @@ export const AddExpenseSheet: React.FC<AddExpenseSheetProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto overscroll-contain"
+    >
       <div
-        className="w-full max-w-md bg-white dark:bg-slate-900 rounded-t-3xl shadow-2xl border-t border-slate-200 dark:border-slate-800 p-5 pb-[calc(env(safe-area-inset-bottom,0px)+2rem)] space-y-4 animate-in slide-in-from-bottom duration-300 max-h-[92vh] overflow-y-auto"
+        className="w-full max-w-md bg-white dark:bg-slate-900 rounded-t-3xl shadow-2xl border-t border-slate-200 dark:border-slate-800 p-5 pb-[calc(env(safe-area-inset-bottom,0px)+2rem)] space-y-4 animate-in slide-in-from-bottom duration-300 max-h-[min(92vh,90dvh)] sm:max-h-[88vh] overflow-y-auto overscroll-contain touch-pan-y"
+        style={{ WebkitOverflowScrolling: 'touch' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* iOS Drag Handle */}
@@ -85,7 +90,8 @@ export const AddExpenseSheet: React.FC<AddExpenseSheetProps> = ({
           </h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+            className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            aria-label="Close sheet"
           >
             <X className="w-5 h-5" />
           </button>
@@ -157,11 +163,12 @@ export const AddExpenseSheet: React.FC<AddExpenseSheetProps> = ({
                 const isSelected = category === catKey;
 
                 return (
-                  <button
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
                     key={catKey}
                     type="button"
                     onClick={() => handleCategorySelect(catKey)}
-                    className={`flex items-center gap-1.5 p-2.5 rounded-xl text-xs font-bold border transition cursor-pointer active:scale-95 ${
+                    className={`flex items-center gap-1.5 p-2.5 rounded-xl text-xs font-bold border transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                       isSelected
                         ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
                         : 'bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700/80 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -169,7 +176,7 @@ export const AddExpenseSheet: React.FC<AddExpenseSheetProps> = ({
                   >
                     <span className="text-sm">{meta.emoji}</span>
                     <span className="truncate">{meta.displayName}</span>
-                  </button>
+                  </motion.button>
                 );
               })}
             </div>
@@ -195,14 +202,15 @@ export const AddExpenseSheet: React.FC<AddExpenseSheetProps> = ({
           </div>
 
           {/* Submit button */}
-          <button
+          <motion.button
+            whileTap={{ scale: 0.98 }}
             type="submit"
             disabled={!amountInput || parseFloat(amountInput) <= 0}
-            className="w-full py-4 rounded-2xl bg-indigo-950 hover:bg-indigo-900 dark:bg-indigo-600 dark:hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-base shadow-lg shadow-indigo-950/20 active:scale-[0.98] transition flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full py-4 rounded-2xl bg-indigo-950 hover:bg-indigo-900 dark:bg-indigo-600 dark:hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-base shadow-lg shadow-indigo-950/20 transition flex items-center justify-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
           >
             <Plus className="w-5 h-5" />
             <span>Record Expense</span>
-          </button>
+          </motion.button>
         </form>
       </div>
     </div>

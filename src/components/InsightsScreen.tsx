@@ -92,11 +92,11 @@ export const InsightsScreen: React.FC = () => {
   const cycleSpentPct = cycleSpendable > 0 ? Math.min(100, Math.round((cycleSpent / cycleSpendable) * 100)) : 0;
 
   return (
-    <div className="min-h-screen bg-[#FBFBFE] dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors pb-[calc(env(safe-area-inset-bottom,0px)+6.5rem)]">
+    <div className="min-h-screen min-h-[100dvh] w-full bg-[#FBFBFE] dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors pb-[calc(env(safe-area-inset-bottom,0px)+7.5rem)]">
       {/* Header */}
-      <header className="sticky top-0 z-20 backdrop-blur-md bg-white/80 dark:bg-slate-950/80 px-5 pt-[calc(env(safe-area-inset-top,0px)+0.875rem)] pb-3.5">
+      <header className="sticky top-0 z-20 backdrop-blur-md bg-white/80 dark:bg-slate-950/80 px-4 sm:px-5 pt-[calc(env(safe-area-inset-top,0px)+0.875rem)] pb-3.5 border-b border-slate-100/60 dark:border-slate-900/60">
         <div className="max-w-md mx-auto flex items-center justify-between">
-          <h1 className="text-xl font-black text-[#1E1B4B] dark:text-white tracking-tight">
+          <h1 className="text-lg font-black tracking-tight text-[#1E1B4B] dark:text-white">
             Spending Insights
           </h1>
           <ThemeToggle />
@@ -116,7 +116,7 @@ export const InsightsScreen: React.FC = () => {
             },
           },
         }}
-        className="max-w-md mx-auto px-5 pt-2 space-y-4"
+        className="max-w-md mx-auto px-4 sm:px-5 pt-2 space-y-4"
       >
         {/* Card 1: Pay Cycle Summary (Matching Screenshot 1) */}
         <motion.div
@@ -128,7 +128,9 @@ export const InsightsScreen: React.FC = () => {
               transition: { duration: 0.28, ease: [0.25, 1, 0.5, 1] },
             },
           }}
-          className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-indigo-100/90 dark:border-indigo-950 shadow-xs space-y-4"
+          whileHover={{ y: -2 }}
+          transition={{ duration: 0.2 }}
+          className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-indigo-100/90 dark:border-slate-800 shadow-xs space-y-4"
         >
           <div>
             <h2 className="text-sm font-bold text-[#1E1B4B] dark:text-white">
@@ -163,7 +165,7 @@ export const InsightsScreen: React.FC = () => {
           {/* 3 Stats Columns */}
           <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
             <div className="min-w-0">
-              <span className="text-[11px] text-slate-400 font-medium block truncate">
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium block truncate">
                 Total Budget
               </span>
               <span
@@ -175,7 +177,7 @@ export const InsightsScreen: React.FC = () => {
             </div>
 
             <div className="min-w-0">
-              <span className="text-[11px] text-slate-400 font-medium block truncate">
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium block truncate">
                 Target Savings
               </span>
               <span
@@ -187,7 +189,7 @@ export const InsightsScreen: React.FC = () => {
             </div>
 
             <div className="min-w-0">
-              <span className="text-[11px] text-slate-400 font-medium block truncate">
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium block truncate">
                 Daily Target
               </span>
               <span
@@ -210,7 +212,9 @@ export const InsightsScreen: React.FC = () => {
               transition: { duration: 0.28, ease: [0.25, 1, 0.5, 1] },
             },
           }}
-          className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-indigo-100/90 dark:border-indigo-950 shadow-xs space-y-2"
+          whileHover={{ y: -2 }}
+          transition={{ duration: 0.2 }}
+          className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-indigo-100/90 dark:border-slate-800 shadow-xs space-y-2"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -245,7 +249,9 @@ export const InsightsScreen: React.FC = () => {
               transition: { duration: 0.28, ease: [0.25, 1, 0.5, 1] },
             },
           }}
-          className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-indigo-100/90 dark:border-indigo-950 shadow-xs space-y-4"
+          whileHover={{ y: -2 }}
+          transition={{ duration: 0.2 }}
+          className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-indigo-100/90 dark:border-slate-800 shadow-xs space-y-4"
         >
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-[#1E1B4B] dark:text-white">
@@ -331,7 +337,9 @@ export const InsightsScreen: React.FC = () => {
               transition: { duration: 0.28, ease: [0.25, 1, 0.5, 1] },
             },
           }}
-          className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-indigo-100/90 dark:border-indigo-950 shadow-xs space-y-3"
+          whileHover={{ y: -2 }}
+          transition={{ duration: 0.2 }}
+          className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-indigo-100/90 dark:border-slate-800 shadow-xs space-y-3"
         >
           <h3 className="text-sm font-bold text-[#1E1B4B] dark:text-white">
             Top Categories
@@ -366,7 +374,7 @@ export const InsightsScreen: React.FC = () => {
                         initial={{ width: 0 }}
                         animate={{ width: `${Math.min(100, cat.percentage)}%` }}
                         transition={{ duration: 0.5, delay: idx * 0.05, ease: [0.25, 1, 0.5, 1] }}
-                        className="h-full rounded-full bg-indigo-600"
+                        className="h-full rounded-full bg-indigo-600 dark:bg-indigo-500"
                       />
                     </div>
                   </div>
