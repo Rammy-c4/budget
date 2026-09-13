@@ -42,6 +42,9 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
   const [incomeInput, setIncomeInput] = useState(
     initialProfile?.monthlyIncome ? String(initialProfile.monthlyIncome) : '2100'
   );
+  const [hasSavingsGoal, setHasSavingsGoal] = useState<boolean>(
+    initialProfile?.hasSavingsGoal !== undefined ? initialProfile.hasSavingsGoal : true
+  );
   const [savingsInput, setSavingsInput] = useState(
     initialProfile?.monthlySavingsGoal ? String(initialProfile.monthlySavingsGoal) : '600'
   );
@@ -67,7 +70,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
   const currencySymbol = 'GH₵';
 
   const numericIncome = parseFloat(incomeInput) || 0;
-  const numericSavings = parseFloat(savingsInput) || 0;
+  const numericSavings = hasSavingsGoal ? (parseFloat(savingsInput) || 0) : 0;
 
   // Real-time calculation preview
   const cycleDays = useMemo(() => {
@@ -93,27 +96,29 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
     }
 
     if (numericIncome <= 0) {
-      setErrorMessage('Please enter a valid salary amount.');
+      setErrorMessage('Please enter a valid budget amount.');
       return;
     }
 
-    if (numericSavings < 0) {
-      setErrorMessage('Savings target cannot be negative.');
-      return;
-    }
+    if (hasSavingsGoal) {
+      if (numericSavings < 0) {
+        setErrorMessage('Savings target cannot be negative.');
+        return;
+      }
 
-    if (numericSavings >= numericIncome) {
-      setErrorMessage('Savings target cannot equal or exceed your entire salary.');
-      return;
+      if (numericSavings >= numericIncome) {
+        setErrorMessage('Savings target cannot equal or exceed your entire budget.');
+        return;
+      }
     }
 
     if (!salaryDate || !nextSalaryDate) {
-      setErrorMessage('Please select both salary dates.');
+      setErrorMessage('Please select both cycle dates.');
       return;
     }
 
     if (nextSalaryDate <= salaryDate) {
-      setErrorMessage('Expected next salary date must be after salary received date.');
+      setErrorMessage('Cycle end date must be after cycle start date.');
       return;
     }
 
@@ -124,7 +129,9 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
       userName: userName.trim(),
       currencySymbol,
       monthlyIncome: numericIncome,
-      monthlySavingsGoal: numericSavings,
+      budgetAmount: numericIncome,
+      monthlySavingsGoal: hasSavingsGoal ? numericSavings : 0,
+      hasSavingsGoal,
       salaryDateString: salaryDate,
       nextSalaryDateString: nextSalaryDate,
       updatedAt: new Date().toISOString(),
@@ -189,7 +196,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
               </button>
             )}
             <h1 className="text-xl font-black text-[#1E1B4B] dark:text-white tracking-tight">
-              {isEditing ? 'Edit Budget Parameters' : 'Salary & Budget Setup'}
+              {isEditing ? 'Edit Budget Parameters' : 'Budget Setup'}
             </h1>
           </div>
           <ThemeToggle />
@@ -202,7 +209,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
               Budget Setup
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-              Tell us when you receive your salary and how much you plan to save. We&apos;ll recommend how much you can spend each day.
+              Set your total budget and cycle dates. Savings is optional. We&apos;ll recommend how much you can spend each day.
             </p>
           </div>
         )}
@@ -244,13 +251,13 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                 />
               </div>
 
-              {/* Field 2: Salary Amount */}
+              {/* Field 2: Budget Amount */}
               <div className="relative rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3.5 pt-2 pb-2.5 shadow-2xs focus-within:border-indigo-600 focus-within:ring-1 focus-within:ring-indigo-100 dark:focus-within:border-indigo-500 dark:focus-within:ring-indigo-900/40">
                 <label
                   htmlFor="setup-income"
                   className="block text-[11px] font-medium text-slate-500 dark:text-slate-400"
                 >
-                  Salary Amount
+                  Total Budget Amount
                 </label>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-sm font-bold text-[#1E1B4B] dark:text-white">
@@ -270,13 +277,13 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                 </div>
               </div>
 
-              {/* Field 3: Salary Received Date */}
+              {/* Field 3: Budget Cycle Start Date */}
               <div className="relative rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3.5 pt-2 pb-2.5 shadow-2xs focus-within:border-indigo-600 focus-within:ring-1 focus-within:ring-indigo-100 dark:focus-within:border-indigo-500 dark:focus-within:ring-indigo-900/40">
                 <label
                   htmlFor="setup-salary-date"
                   className="block text-[11px] font-medium text-slate-500 dark:text-slate-400"
                 >
-                  Salary Received Date
+                  Budget Cycle Start Date
                 </label>
                 <div className="flex items-center justify-between mt-0.5 relative">
                   <span className="text-sm font-bold text-[#1E1B4B] dark:text-white">
@@ -294,13 +301,13 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                 </div>
               </div>
 
-              {/* Field 4: Expected Next Salary Date */}
+              {/* Field 4: Budget Cycle End Date */}
               <div className="relative rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3.5 pt-2 pb-2.5 shadow-2xs focus-within:border-indigo-600 focus-within:ring-1 focus-within:ring-indigo-100 dark:focus-within:border-indigo-500 dark:focus-within:ring-indigo-900/40">
                 <label
                   htmlFor="setup-next-salary-date"
                   className="block text-[11px] font-medium text-slate-500 dark:text-slate-400"
                 >
-                  Expected Next Salary Date
+                  Budget Cycle End Date
                 </label>
                 <div className="flex items-center justify-between mt-0.5 relative">
                   <span className="text-sm font-bold text-[#1E1B4B] dark:text-white">
@@ -318,29 +325,62 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                 </div>
               </div>
 
-              {/* Field 5: Savings Target for this Cycle */}
-              <div className="relative rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3.5 pt-2 pb-2.5 shadow-2xs focus-within:border-indigo-600 focus-within:ring-1 focus-within:ring-indigo-100 dark:focus-within:border-indigo-500 dark:focus-within:ring-indigo-900/40">
-                <label
-                  htmlFor="setup-savings"
-                  className="block text-[11px] font-medium text-slate-500 dark:text-slate-400"
-                >
-                  Savings Target for this Cycle
-                </label>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-sm font-bold text-[#1E1B4B] dark:text-white">
-                    {currencySymbol}
-                  </span>
-                  <input
-                    id="setup-savings"
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={savingsInput}
-                    onChange={(e) => setSavingsInput(e.target.value)}
-                    placeholder="600"
-                    className="w-full text-sm font-bold text-[#1E1B4B] dark:text-white bg-transparent outline-none"
-                  />
+              {/* Field 5: Savings Goal (Optional) */}
+              <div className="relative rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3.5 pt-2.5 pb-2.5 shadow-2xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor="setup-savings"
+                    className="block text-[11px] font-medium text-slate-500 dark:text-slate-400"
+                  >
+                    Savings Goal (Optional)
+                  </label>
+                  <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-[10px] font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setHasSavingsGoal(true)}
+                      className={`px-2 py-0.5 rounded-md transition cursor-pointer ${
+                        hasSavingsGoal
+                          ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs'
+                          : 'text-slate-500 dark:text-slate-400'
+                      }`}
+                    >
+                      With Goal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHasSavingsGoal(false)}
+                      className={`px-2 py-0.5 rounded-md transition cursor-pointer ${
+                        !hasSavingsGoal
+                          ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs'
+                          : 'text-slate-500 dark:text-slate-400'
+                      }`}
+                    >
+                      None
+                    </button>
+                  </div>
                 </div>
+
+                {hasSavingsGoal ? (
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-sm font-bold text-[#1E1B4B] dark:text-white">
+                      {currencySymbol}
+                    </span>
+                    <input
+                      id="setup-savings"
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={savingsInput}
+                      onChange={(e) => setSavingsInput(e.target.value)}
+                      placeholder="600"
+                      className="w-full text-sm font-bold text-[#1E1B4B] dark:text-white bg-transparent outline-none"
+                    />
+                  </div>
+                ) : (
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium pt-0.5">
+                    No savings deducted. 100% of your budget is available for spending.
+                  </p>
+                )}
               </div>
 
               {/* Live Preview Card */}
@@ -423,7 +463,9 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                       transition={{ duration: 0.65, delay: 0.08, ease: 'easeInOut' }}
                       className="absolute z-20 px-2.5 py-1 rounded-full bg-emerald-800 text-white text-[11px] font-black border border-emerald-400 shadow-md pointer-events-none"
                     >
-                      Save {currencySymbol}{numericSavings}
+                      {hasSavingsGoal && numericSavings > 0
+                        ? `Save ${currencySymbol}${numericSavings}`
+                        : 'Full Budget'}
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -471,10 +513,12 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                       className="space-y-1"
                     >
                       <h3 className="text-sm font-black text-[#1E1B4B] dark:text-white">
-                        Organizing Salary & Budget
+                        Organizing Budget Plan
                       </h3>
                       <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Aligning income of {currencySymbol}{numericIncome} with {currencySymbol}{numericSavings} savings...
+                        {hasSavingsGoal && numericSavings > 0
+                          ? `Allocating budget of ${currencySymbol}${numericIncome} with ${currencySymbol}${numericSavings} savings...`
+                          : `Allocating total budget of ${currencySymbol}${numericIncome}...`}
                       </p>
                     </motion.div>
                   )}

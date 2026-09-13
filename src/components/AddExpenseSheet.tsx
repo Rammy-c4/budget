@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { CATEGORIES, ExpenseCategory } from '../types';
 import { SpendingCalculator } from '../lib/calculator';
-import { Clock, Plus, Tag, X } from 'lucide-react';
+import { Calendar, Clock, Plus, Tag, X } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface AddExpenseSheetProps {
@@ -12,8 +12,10 @@ interface AddExpenseSheetProps {
     amount: number,
     description: string,
     timeFormatted: string,
-    category: ExpenseCategory
+    category: ExpenseCategory,
+    dateString?: string
   ) => void;
+  defaultDateString?: string;
 }
 
 export const AddExpenseSheet: React.FC<AddExpenseSheetProps> = ({
@@ -21,11 +23,13 @@ export const AddExpenseSheet: React.FC<AddExpenseSheetProps> = ({
   isOpen,
   onClose,
   onAdd,
+  defaultDateString,
 }) => {
   const [amountInput, setAmountInput] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<ExpenseCategory>('FOOD');
   const [timeFormatted, setTimeFormatted] = useState('');
+  const [dateString, setDateString] = useState('');
   const [hasManuallySelectedCategory, setHasManuallySelectedCategory] = useState(false);
 
   // Set default current time formatted when opened
@@ -35,12 +39,14 @@ export const AddExpenseSheet: React.FC<AddExpenseSheetProps> = ({
       setDescription('');
       setCategory('FOOD');
       setHasManuallySelectedCategory(false);
+      const today = new Date().toISOString().split('T')[0];
+      setDateString(defaultDateString || today);
       const now = new Date();
       setTimeFormatted(
         now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       );
     }
-  }, [isOpen]);
+  }, [isOpen, defaultDateString]);
 
   // Intelligent category auto-inference from description
   const handleDescriptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -65,7 +71,7 @@ export const AddExpenseSheet: React.FC<AddExpenseSheetProps> = ({
     if (isNaN(numericAmount) || numericAmount <= 0) {
       return;
     }
-    onAdd(numericAmount, description, timeFormatted, category);
+    onAdd(numericAmount, description, timeFormatted, category, dateString);
     onClose();
   };
 
@@ -182,23 +188,43 @@ export const AddExpenseSheet: React.FC<AddExpenseSheetProps> = ({
             </div>
           </div>
 
-          {/* Time input */}
-          <div className="space-y-1">
-            <label
-              htmlFor="add-expense-time"
-              className="text-xs font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1"
-            >
-              <Clock className="w-3.5 h-3.5" />
-              <span>Time Recorded</span>
-            </label>
-            <input
-              id="add-expense-time"
-              type="text"
-              value={timeFormatted}
-              onChange={(e) => setTimeFormatted(e.target.value)}
-              placeholder="e.g. 12:30 PM"
-              className="w-full px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none"
-            />
+          {/* Date & Time Row */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label
+                htmlFor="add-expense-date"
+                className="text-xs font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1"
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span>Date</span>
+              </label>
+              <input
+                id="add-expense-date"
+                type="date"
+                value={dateString}
+                onChange={(e) => setDateString(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none"
+                required
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label
+                htmlFor="add-expense-time"
+                className="text-xs font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1"
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>Time</span>
+              </label>
+              <input
+                id="add-expense-time"
+                type="text"
+                value={timeFormatted}
+                onChange={(e) => setTimeFormatted(e.target.value)}
+                placeholder="e.g. 12:30 PM"
+                className="w-full px-3 py-2 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none"
+              />
+            </div>
           </div>
 
           {/* Submit button */}

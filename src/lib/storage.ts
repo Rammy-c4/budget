@@ -1,22 +1,42 @@
-import { AppPreferences, BudgetBackupData, BudgetProfile, ExpenseCategory, ExpenseItem } from '../types';
+import {
+  AdditionalMoneyItem,
+  AppPreferences,
+  BudgetBackupData,
+  BudgetProfile,
+  ExpenseCategory,
+  ExpenseItem,
+  NotificationPreferences,
+  NotificationRuntimeState,
+} from '../types';
 import { SpendingCalculator } from './calculator';
 
-export const CURRENT_STORAGE_SCHEMA_VERSION = 1;
+export const CURRENT_STORAGE_SCHEMA_VERSION = 2;
 
 const STORAGE_KEYS = {
   PROFILE: 'local_budget_profile',
   EXPENSES: 'local_budget_expenses',
+  ADDITIONAL_MONEY: 'local_budget_additional_money',
   PREFERENCES: 'local_budget_preferences',
   THEME: 'theme',
   CONFIRMED_ZERO_DAYS: 'local_budget_confirmed_zero_days',
+  NOTIFICATION_STATE: 'local_budget_notification_state',
   SCHEMA_VERSION: 'local_budget_schema_version',
+};
+
+export const defaultNotificationPreferences: NotificationPreferences = {
+  enabled: false,
+  dailyBudgetReminder: false,
+  reminderTime: '20:00',
+  expenseReminder: false,
+  budgetWarning: false,
 };
 
 export const defaultPreferences: AppPreferences = {
   version: CURRENT_STORAGE_SCHEMA_VERSION,
-  dailyReminderEnabled: true,
+  dailyReminderEnabled: false,
   theme: 'light',
   hasCompletedOnboarding: false,
+  notifications: defaultNotificationPreferences,
 };
 
 const VALID_CATEGORIES: ExpenseCategory[] = [
@@ -69,9 +89,19 @@ export class LocalStorageManager {
       isFinite(item.monthlyIncome) &&
       item.monthlyIncome >= 0
         ? item.monthlyIncome
+        : typeof item.budgetAmount === 'number' &&
+          isFinite(item.budgetAmount) &&
+          item.budgetAmount >= 0
+        ? item.budgetAmount
         : 0;
 
+    const hasSavingsGoal =
+      typeof item.hasSavingsGoal === 'boolean'
+        ? item.hasSavingsGoal
+        : true;
+
     const monthlySavingsGoal =
+      hasSavingsGoal &&
       typeof item.monthlySavingsGoal === 'number' &&
       isFinite(item.monthlySavingsGoal) &&
       item.monthlySavingsGoal >= 0
@@ -103,7 +133,9 @@ export class LocalStorageManager {
       userName,
       currencySymbol,
       monthlyIncome,
+      budgetAmount: monthlyIncome,
       monthlySavingsGoal,
+      hasSavingsGoal,
       salaryDateString,
       nextSalaryDateString,
       createdAt: typeof item.createdAt === 'string' ? item.createdAt : new Date().toISOString(),
@@ -188,6 +220,61 @@ export class LocalStorageManager {
   }
 
   /**
+   * Validates and sanitizes an array of AdditionalMoneyItems.
+   */
+  public static validateAdditionalMoney(data: unknown): AdditionalMoneyItem[] {
+    if (!Array.isArray(data)) {
+      return [];
+    }
+
+    const validItems: AdditionalMoneyItem[] = [];
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    const todayStr = SpendingCalculator.formatDate(new Date());
+
+    data.forEach((entry, idx) => {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+        return;
+      }
+
+      const item = entry as Record<string, unknown>;
+      const amount =
+        typeof item.amount === 'number' && isFinite(item.amount) && item.amount > 0
+          ? item.amount
+          : 0;
+
+      if (amount <= 0) return;
+
+      const dateString =
+        typeof item.dateString === 'string' && dateRegex.test(item.dateString)
+          ? item.dateString
+          : todayStr;
+
+      const description =
+        typeof item.description === 'string' && item.description.trim().length > 0
+          ? item.description.trim()
+          : undefined;
+
+      const id =
+        typeof item.id === 'number' && item.id > 0 ? item.id : Date.now() + idx;
+
+      const createdAt =
+        typeof item.createdAt === 'number' && item.createdAt > 0
+          ? item.createdAt
+          : Date.now() - idx * 1000;
+
+      validItems.push({
+        id,
+        amount,
+        description,
+        dateString,
+        createdAt,
+      });
+    });
+
+    return validItems.sort((a, b) => b.createdAt - a.createdAt);
+  }
+
+  /**
    * Validates preferences with safe fallbacks.
    */
   public static validatePreferences(data: unknown): AppPreferences {
@@ -200,11 +287,6 @@ export class LocalStorageManager {
     const theme: 'light' | 'dark' =
       item.theme === 'dark' || item.theme === 'light' ? item.theme : 'light';
 
-    const dailyReminderEnabled =
-      typeof item.dailyReminderEnabled === 'boolean'
-        ? item.dailyReminderEnabled
-        : defaultPreferences.dailyReminderEnabled;
-
     const hasCompletedOnboarding =
       typeof item.hasCompletedOnboarding === 'boolean'
         ? item.hasCompletedOnboarding
@@ -215,11 +297,46 @@ export class LocalStorageManager {
         ? item.version
         : CURRENT_STORAGE_SCHEMA_VERSION;
 
+    let notifications: NotificationPreferences = { ...defaultNotificationPreferences };
+    if (
+      item.notifications &&
+      typeof item.notifications === 'object' &&
+      !Array.isArray(item.notifications)
+    ) {
+      const notifObj = item.notifications as Record<string, unknown>;
+      const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
+      const reminderTime =
+        typeof notifObj.reminderTime === 'string' && timeRegex.test(notifObj.reminderTime)
+          ? notifObj.reminderTime
+          : defaultNotificationPreferences.reminderTime;
+
+      const dailyBudgetReminder = Boolean(notifObj.dailyBudgetReminder);
+      const expenseReminder = Boolean(notifObj.expenseReminder);
+      const budgetWarning = Boolean(notifObj.budgetWarning);
+      const enabled =
+        typeof notifObj.enabled === 'boolean'
+          ? notifObj.enabled
+          : (dailyBudgetReminder || expenseReminder || budgetWarning);
+
+      notifications = {
+        enabled,
+        dailyBudgetReminder,
+        reminderTime,
+        expenseReminder,
+        budgetWarning,
+      };
+    }
+
+    const dailyReminderEnabled = Boolean(
+      notifications.enabled && notifications.dailyBudgetReminder
+    );
+
     return {
       version,
       dailyReminderEnabled,
       theme,
       hasCompletedOnboarding,
+      notifications,
     };
   }
 
@@ -287,8 +404,11 @@ export class LocalStorageManager {
     try {
       const currentVer = this.getSchemaVersion();
       if (currentVer < CURRENT_STORAGE_SCHEMA_VERSION) {
-        // Future migration pipeline hook:
-        // if (currentVer === 1) migrateV1ToV2();
+        // Migration from v1 to v2:
+        // Existing user data (profile, expenses, additional money, confirmed zero days) are preserved 100%.
+        // Migrate preferences to include default notification settings safely without altering user settings.
+        const currentPrefs = this.getPreferences();
+        this.savePreferences(currentPrefs);
         localStorage.setItem(
           STORAGE_KEYS.SCHEMA_VERSION,
           String(CURRENT_STORAGE_SCHEMA_VERSION)
@@ -414,6 +534,26 @@ export class LocalStorageManager {
     }
   }
 
+  static getAdditionalMoney(): AdditionalMoneyItem[] {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.ADDITIONAL_MONEY);
+      if (!raw) return [];
+      const parsed = this.safeParse<unknown>(raw, []);
+      return this.validateAdditionalMoney(parsed);
+    } catch {
+      return [];
+    }
+  }
+
+  static saveAdditionalMoney(items: AdditionalMoneyItem[]): void {
+    try {
+      const validated = this.validateAdditionalMoney(items);
+      localStorage.setItem(STORAGE_KEYS.ADDITIONAL_MONEY, JSON.stringify(validated));
+    } catch {
+      // Ignore storage errors
+    }
+  }
+
   static getPreferences(): AppPreferences {
     try {
       const savedTheme = this.getSavedTheme();
@@ -473,11 +613,73 @@ export class LocalStorageManager {
     }
   }
 
+  static getNotificationPreferences(): NotificationPreferences {
+    const prefs = this.getPreferences();
+    return prefs.notifications
+      ? { ...prefs.notifications }
+      : { ...defaultNotificationPreferences };
+  }
+
+  static saveNotificationPreferences(notifications: NotificationPreferences): void {
+    try {
+      const currentPrefs = this.getPreferences();
+      const updated: AppPreferences = {
+        ...currentPrefs,
+        notifications,
+        dailyReminderEnabled: Boolean(
+          notifications.enabled && notifications.dailyBudgetReminder
+        ),
+      };
+      this.savePreferences(updated);
+    } catch {
+      // Ignore storage errors
+    }
+  }
+
+  static getNotificationRuntimeState(): NotificationRuntimeState {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.NOTIFICATION_STATE);
+      if (!raw) return {};
+      const parsed = this.safeParse<unknown>(raw, {});
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        return {};
+      }
+      const item = parsed as Record<string, unknown>;
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      return {
+        lastDailyReminderDate:
+          typeof item.lastDailyReminderDate === 'string' && dateRegex.test(item.lastDailyReminderDate)
+            ? item.lastDailyReminderDate
+            : undefined,
+        lastExpenseReminderDate:
+          typeof item.lastExpenseReminderDate === 'string' && dateRegex.test(item.lastExpenseReminderDate)
+            ? item.lastExpenseReminderDate
+            : undefined,
+        lastBudgetWarningDate:
+          typeof item.lastBudgetWarningDate === 'string' && dateRegex.test(item.lastBudgetWarningDate)
+            ? item.lastBudgetWarningDate
+            : undefined,
+      };
+    } catch {
+      return {};
+    }
+  }
+
+  static saveNotificationRuntimeState(state: NotificationRuntimeState): void {
+    try {
+      localStorage.setItem(STORAGE_KEYS.NOTIFICATION_STATE, JSON.stringify(state));
+    } catch {
+      // Ignore storage errors
+    }
+  }
+
   static clearAll(): void {
     try {
       localStorage.removeItem(STORAGE_KEYS.PROFILE);
       localStorage.removeItem(STORAGE_KEYS.EXPENSES);
+      localStorage.removeItem(STORAGE_KEYS.ADDITIONAL_MONEY);
       localStorage.removeItem(STORAGE_KEYS.CONFIRMED_ZERO_DAYS);
+      localStorage.removeItem(STORAGE_KEYS.NOTIFICATION_STATE);
       const currentTheme = this.getPreferences().theme;
       localStorage.removeItem(STORAGE_KEYS.PREFERENCES);
       this.savePreferences({
@@ -507,6 +709,7 @@ export class LocalStorageManager {
       exportedAt: new Date().toISOString(),
       profile: this.getProfile(),
       expenses: this.getExpenses(),
+      additionalMoney: this.getAdditionalMoney(),
       preferences: this.getPreferences(),
       confirmedZeroDays: this.getConfirmedZeroDays(),
     };
@@ -579,6 +782,7 @@ export class LocalStorageManager {
     try {
       const validatedProfile = this.validateProfile(obj.profile);
       const validatedExpenses = this.validateExpenses(obj.expenses);
+      const validatedAdditionalMoney = this.validateAdditionalMoney(obj.additionalMoney);
       const validatedPreferences = this.validatePreferences(obj.preferences);
       const validatedConfirmedZeroDays = this.validateConfirmedZeroDays(
         obj.confirmedZeroDays
@@ -598,6 +802,7 @@ export class LocalStorageManager {
             : new Date().toISOString(),
         profile: validatedProfile,
         expenses: validatedExpenses,
+        additionalMoney: validatedAdditionalMoney,
         preferences: validatedPreferences,
         confirmedZeroDays: validatedConfirmedZeroDays,
       };
@@ -622,6 +827,11 @@ export class LocalStorageManager {
     }
 
     this.saveExpenses(backup.expenses);
+    if (backup.additionalMoney) {
+      this.saveAdditionalMoney(backup.additionalMoney);
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.ADDITIONAL_MONEY);
+    }
     this.savePreferences(backup.preferences);
 
     localStorage.setItem(
@@ -652,7 +862,9 @@ export class LocalStorageManager {
       userName: 'Rammy',
       currencySymbol: 'GH₵',
       monthlyIncome: 4500,
+      budgetAmount: 4500,
       monthlySavingsGoal: 1200,
+      hasSavingsGoal: true,
       salaryDateString: SpendingCalculator.formatDate(salaryDate),
       nextSalaryDateString: SpendingCalculator.formatDate(nextSalaryDate),
       createdAt: new Date().toISOString(),

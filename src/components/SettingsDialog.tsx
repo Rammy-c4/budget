@@ -6,11 +6,20 @@ import { PWAInstallButton } from './PWAInstallButton';
 import { ThemeToggle } from './ThemeToggle';
 import { trackFeatureAction } from '../lib/analytics';
 import {
+  formatReminderTime,
+  getNotificationPermission,
+  getNotificationSupportStatus,
+  NotificationSupportStatus,
+  requestNotificationPermission,
+} from '../lib/notifications';
+import { defaultNotificationPreferences } from '../lib/storage';
+import {
   AlertCircle,
   Bell,
   Check,
   CheckCircle2,
   ChevronRight,
+  Clock,
   Download,
   RotateCcw,
   Sliders,
@@ -44,16 +53,30 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   onOpenEditName,
   onOpenResetConfirm,
 }) => {
-  const { exportBackup, importBackup } = useBudget();
+  const { exportBackup, importBackup, preferences, updateNotificationPreferences } = useBudget();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [backupStatus, setBackupStatus] = useState<{
     type: 'success' | 'error';
     message: string;
   } | null>(null);
 
+  const notificationPrefs = preferences.notifications || defaultNotificationPreferences;
+
+  const [permissionState, setPermissionState] = useState<NotificationPermission | 'unsupported'>(
+    () => getNotificationPermission()
+  );
+  const [supportStatus, setSupportStatus] = useState<NotificationSupportStatus>(() =>
+    getNotificationSupportStatus()
+  );
+  const [showPermissionExplainer, setShowPermissionExplainer] = useState(false);
+  const [pendingFeature, setPendingFeature] = useState<'daily' | 'expense' | 'warning' | null>(null);
+
   useEffect(() => {
     if (isOpen) {
       trackFeatureAction('open_settings');
+      trackFeatureAction('notifications_settings_opened');
+      setPermissionState(getNotificationPermission());
+      setSupportStatus(getNotificationSupportStatus());
     }
   }, [isOpen]);
 
@@ -61,8 +84,85 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
 
   const spendablePool = SpendingCalculator.calculateMonthlySpendable(
     profile.monthlyIncome,
-    profile.monthlySavingsGoal
+    profile.monthlySavingsGoal,
+    profile.hasSavingsGoal !== false
   );
+
+  const handleToggleFeature = async (feature: 'daily' | 'expense' | 'warning') => {
+    if (permissionState === 'unsupported' || permissionState === 'denied') {
+      return;
+    }
+
+    if (permissionState === 'default') {
+      setPendingFeature(feature);
+      setShowPermissionExplainer(true);
+      return;
+    }
+
+    // Permission is granted
+    let updatedFeatureValue = false;
+    if (feature === 'daily') {
+      updatedFeatureValue = !notificationPrefs.dailyBudgetReminder;
+      updateNotificationPreferences({
+        dailyBudgetReminder: updatedFeatureValue,
+        enabled:
+          updatedFeatureValue ||
+          Boolean(notificationPrefs.expenseReminder) ||
+          Boolean(notificationPrefs.budgetWarning),
+      });
+      onToggleReminder(updatedFeatureValue);
+    } else if (feature === 'expense') {
+      updatedFeatureValue = !notificationPrefs.expenseReminder;
+      updateNotificationPreferences({
+        expenseReminder: updatedFeatureValue,
+        enabled:
+          Boolean(notificationPrefs.dailyBudgetReminder) ||
+          updatedFeatureValue ||
+          Boolean(notificationPrefs.budgetWarning),
+      });
+    } else if (feature === 'warning') {
+      updatedFeatureValue = !notificationPrefs.budgetWarning;
+      updateNotificationPreferences({
+        budgetWarning: updatedFeatureValue,
+        enabled:
+          Boolean(notificationPrefs.dailyBudgetReminder) ||
+          Boolean(notificationPrefs.expenseReminder) ||
+          updatedFeatureValue,
+      });
+    }
+
+    trackFeatureAction('notification_preference_changed');
+  };
+
+  const handleConfirmEnable = async () => {
+    const result = await requestNotificationPermission();
+    setPermissionState(result);
+    setShowPermissionExplainer(false);
+
+    if (result === 'granted') {
+      trackFeatureAction('notifications_enabled');
+      const feature = pendingFeature || 'daily';
+      updateNotificationPreferences({
+        enabled: true,
+        dailyBudgetReminder:
+          feature === 'daily' ? true : Boolean(notificationPrefs.dailyBudgetReminder),
+        expenseReminder:
+          feature === 'expense' ? true : Boolean(notificationPrefs.expenseReminder),
+        budgetWarning:
+          feature === 'warning' ? true : Boolean(notificationPrefs.budgetWarning),
+      });
+      if (feature === 'daily') {
+        onToggleReminder(true);
+      }
+      setPendingFeature(null);
+    }
+  };
+
+  const handleTimeChange = (newTime: string) => {
+    if (!newTime || !/^([01]\d|2[0-3]):[0-5]\d$/.test(newTime)) return;
+    updateNotificationPreferences({ reminderTime: newTime });
+    trackFeatureAction('notification_preference_changed');
+  };
 
   const handleExport = () => {
     setBackupStatus(null);
@@ -185,7 +285,9 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
           <div className="flex items-center justify-between text-xs">
             <span className="text-slate-600 dark:text-slate-400">Planned Savings</span>
             <span className="font-bold text-amber-700 dark:text-amber-400">
-              {profile.currencySymbol}{SpendingCalculator.formatAmount(profile.monthlySavingsGoal)}
+              {profile.hasSavingsGoal !== false
+                ? `${profile.currencySymbol}${SpendingCalculator.formatAmount(profile.monthlySavingsGoal)}`
+                : 'None'}
             </span>
           </div>
 
@@ -199,35 +301,218 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
           </div>
         </div>
 
-        {/* Daily 8:00 PM Check-In Toggle */}
-        <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 flex items-center justify-center">
-              <Bell className="w-4 h-4" />
+        {/* Notifications Section */}
+        <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800 space-y-3">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 flex items-center justify-center">
+                <Bell className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-900 dark:text-white">
+                  Notifications
+                </p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Stay on top of your budget
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs font-bold text-slate-900 dark:text-white">
-                Daily 8:00 PM Check-In
-              </p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Evening prompt to log spending
-              </p>
-            </div>
+
+            {permissionState === 'granted' && notificationPrefs.enabled && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800">
+                Active
+              </span>
+            )}
           </div>
 
-          <button
-            onClick={() => onToggleReminder(!dailyReminderEnabled)}
-            className={`w-12 h-6.5 flex items-center rounded-full p-1 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
-              dailyReminderEnabled ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'
-            }`}
-            aria-label="Toggle daily reminder"
-          >
-            <div
-              className={`bg-white w-5 h-5 rounded-full shadow-md transform transition-transform ${
-                dailyReminderEnabled ? 'translate-x-5.5' : 'translate-x-0'
-              }`}
-            />
-          </button>
+          {/* Browser Unsupported Notice */}
+          {supportStatus === 'unsupported' && (
+            <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/80 text-[11px] text-amber-800 dark:text-amber-300 flex items-start gap-2">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+              <span>Notifications aren't supported on this device or browser.</span>
+            </div>
+          )}
+
+          {/* iOS Safari needs Home Screen PWA */}
+          {supportStatus === 'ios_needs_pwa' && (
+            <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/80 text-[11px] text-indigo-800 dark:text-indigo-300 space-y-1">
+              <p className="font-bold flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0 text-indigo-600 dark:text-indigo-400" />
+                <span>iPhone Home Screen Required</span>
+              </p>
+              <p className="text-[10px] leading-relaxed text-indigo-700 dark:text-indigo-300">
+                On iOS, Apple requires Local Budget to be added to your Home Screen before notifications can be enabled. Tap the Share button in Safari, then select "Add to Home Screen".
+              </p>
+            </div>
+          )}
+
+          {/* Permission Denied Notice */}
+          {permissionState === 'denied' && (
+            <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-800/80 text-[11px] text-rose-800 dark:text-rose-300 space-y-1">
+              <p className="font-bold flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600 dark:text-rose-400" />
+                <span>Notifications Blocked</span>
+              </p>
+              <p className="text-[10px] leading-relaxed text-rose-700 dark:text-rose-300">
+                Notifications are disabled because permission was not granted. To receive reminders, allow notifications in your browser or device settings.
+              </p>
+            </div>
+          )}
+
+          {/* First-time explanation card */}
+          {showPermissionExplainer && (
+            <div className="p-3 rounded-xl bg-indigo-50/90 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-xs space-y-2 animate-in fade-in duration-150">
+              <p className="font-bold text-indigo-950 dark:text-indigo-200">
+                Enable Local Reminders
+              </p>
+              <p className="text-[11px] leading-relaxed text-indigo-900/80 dark:text-indigo-300">
+                Local Budget delivers daily spending updates, evening check-in nudges, and budget alerts. All notifications are evaluated locally on this device — your financial data never leaves your browser.
+              </p>
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleConfirmEnable}
+                  className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs cursor-pointer shadow-xs transition active:scale-95"
+                >
+                  Allow Notifications
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPermissionExplainer(false);
+                    setPendingFeature(null);
+                  }}
+                  className="px-2.5 py-1.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-700/60 text-xs font-semibold cursor-pointer transition"
+                >
+                  Not Now
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Controls List */}
+          <div className="space-y-2.5 divide-y divide-slate-200/60 dark:divide-slate-700/60">
+            {/* 1. Daily Budget Reminder */}
+            <div className="flex items-center justify-between pt-1">
+              <div className="pr-3">
+                <p className="text-xs font-bold text-slate-900 dark:text-white">
+                  Daily budget reminder
+                </p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Check your recommended spending for today
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={Boolean(notificationPrefs.dailyBudgetReminder && permissionState === 'granted')}
+                disabled={permissionState === 'unsupported' || permissionState === 'denied'}
+                onClick={() => handleToggleFeature('daily')}
+                className={`w-12 h-6.5 flex items-center rounded-full p-1 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 disabled:opacity-40 disabled:cursor-not-allowed ${
+                  notificationPrefs.dailyBudgetReminder && permissionState === 'granted'
+                    ? 'bg-indigo-600'
+                    : 'bg-slate-300 dark:bg-slate-700'
+                }`}
+                aria-label="Toggle daily budget reminder"
+              >
+                <div
+                  className={`bg-white w-5 h-5 rounded-full shadow-md transform transition-transform ${
+                    notificationPrefs.dailyBudgetReminder && permissionState === 'granted'
+                      ? 'translate-x-5.5'
+                      : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* 2. Reminder Time Selection */}
+            <div className="flex items-center justify-between pt-2.5">
+              <div className="pr-3">
+                <p className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                  <span>Reminder time</span>
+                </p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  {formatReminderTime(notificationPrefs.reminderTime || '20:00')} (Device local time)
+                </p>
+              </div>
+              <input
+                type="time"
+                value={notificationPrefs.reminderTime || '20:00'}
+                disabled={permissionState === 'unsupported' || permissionState === 'denied'}
+                onChange={(e) => handleTimeChange(e.target.value)}
+                className="text-xs font-bold px-2 py-1 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-label="Daily reminder time"
+              />
+            </div>
+
+            {/* 3. Expense Reminder */}
+            <div className="flex items-center justify-between pt-2.5">
+              <div className="pr-3">
+                <p className="text-xs font-bold text-slate-900 dark:text-white">
+                  Expense reminder
+                </p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Evening nudge if no spending was logged today
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={Boolean(notificationPrefs.expenseReminder && permissionState === 'granted')}
+                disabled={permissionState === 'unsupported' || permissionState === 'denied'}
+                onClick={() => handleToggleFeature('expense')}
+                className={`w-12 h-6.5 flex items-center rounded-full p-1 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 disabled:opacity-40 disabled:cursor-not-allowed ${
+                  notificationPrefs.expenseReminder && permissionState === 'granted'
+                    ? 'bg-indigo-600'
+                    : 'bg-slate-300 dark:bg-slate-700'
+                }`}
+                aria-label="Toggle expense reminder"
+              >
+                <div
+                  className={`bg-white w-5 h-5 rounded-full shadow-md transform transition-transform ${
+                    notificationPrefs.expenseReminder && permissionState === 'granted'
+                      ? 'translate-x-5.5'
+                      : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* 4. Budget Warnings */}
+            <div className="flex items-center justify-between pt-2.5">
+              <div className="pr-3">
+                <p className="text-xs font-bold text-slate-900 dark:text-white">
+                  Budget warnings
+                </p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Alert when remaining budget is under pressure
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={Boolean(notificationPrefs.budgetWarning && permissionState === 'granted')}
+                disabled={permissionState === 'unsupported' || permissionState === 'denied'}
+                onClick={() => handleToggleFeature('warning')}
+                className={`w-12 h-6.5 flex items-center rounded-full p-1 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 disabled:opacity-40 disabled:cursor-not-allowed ${
+                  notificationPrefs.budgetWarning && permissionState === 'granted'
+                    ? 'bg-indigo-600'
+                    : 'bg-slate-300 dark:bg-slate-700'
+                }`}
+                aria-label="Toggle budget warnings"
+              >
+                <div
+                  className={`bg-white w-5 h-5 rounded-full shadow-md transform transition-transform ${
+                    notificationPrefs.budgetWarning && permissionState === 'granted'
+                      ? 'translate-x-5.5'
+                      : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* PWA Home Screen Install Guide */}

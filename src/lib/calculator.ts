@@ -1,4 +1,5 @@
 import {
+  AdditionalMoneyItem,
   BudgetProfile,
   CategoryBreakdownItem,
   DailyPerformanceData,
@@ -62,12 +63,39 @@ export class SpendingCalculator {
     return Math.max(0, diff);
   }
 
-  static calculateMonthlySpendable(monthlyIncome: number, monthlySavingsGoal: number): number {
-    return Math.max(0, monthlyIncome - monthlySavingsGoal);
+  /**
+   * Calculates spendable budget.
+   * If hasSavingsGoal is false (user chose 'None'), the full budget (+ additional money) is spendable.
+   */
+  static calculateMonthlySpendable(
+    monthlyIncome: number,
+    monthlySavingsGoal: number,
+    hasSavingsGoal: boolean = true,
+    additionalMoneyTotal: number = 0
+  ): number {
+    const totalAvailable = monthlyIncome + additionalMoneyTotal;
+    if (hasSavingsGoal === false) {
+      return Math.max(0, totalAvailable);
+    }
+    return Math.max(0, totalAvailable - monthlySavingsGoal);
   }
 
   /**
-   * Calculates total spending recorded in the current salary cycle strictly before today.
+   * Calculates additional money received within cycle up to a specific date.
+   */
+  static calculateAdditionalMoneyUpToDate(
+    additionalMoney: AdditionalMoneyItem[],
+    startDateStr: string,
+    dateStr: string
+  ): number {
+    if (!additionalMoney || !Array.isArray(additionalMoney)) return 0;
+    return additionalMoney
+      .filter((m) => m.dateString >= startDateStr && m.dateString <= dateStr)
+      .reduce((sum, m) => sum + m.amount, 0);
+  }
+
+  /**
+   * Calculates total spending recorded in the current budget cycle strictly before today.
    */
   static calculatePastSpendingInCycle(
     expenses: ExpenseItem[],
@@ -97,9 +125,16 @@ export class SpendingCalculator {
     monthlyIncome: number,
     monthlySavingsGoal: number,
     pastSpendingInCycle: number,
-    daysRemaining: number
+    daysRemaining: number,
+    hasSavingsGoal: boolean = true,
+    additionalMoneyUpToToday: number = 0
   ): number {
-    const spendablePool = this.calculateMonthlySpendable(monthlyIncome, monthlySavingsGoal);
+    const spendablePool = this.calculateMonthlySpendable(
+      monthlyIncome,
+      monthlySavingsGoal,
+      hasSavingsGoal,
+      additionalMoneyUpToToday
+    );
     const remainingSpendable = Math.max(0, spendablePool - pastSpendingInCycle);
     const safeDays = Math.max(1, daysRemaining);
     return Math.round((remainingSpendable / safeDays) * 100) / 100;
@@ -120,9 +155,16 @@ export class SpendingCalculator {
     monthlySavingsGoal: number,
     pastSpendingInCycle: number,
     todayActualSpent: number,
-    daysRemaining: number
+    daysRemaining: number,
+    hasSavingsGoal: boolean = true,
+    additionalMoneyUpToToday: number = 0
   ): number {
-    const spendablePool = this.calculateMonthlySpendable(monthlyIncome, monthlySavingsGoal);
+    const spendablePool = this.calculateMonthlySpendable(
+      monthlyIncome,
+      monthlySavingsGoal,
+      hasSavingsGoal,
+      additionalMoneyUpToToday
+    );
     const totalSpentThroughToday = pastSpendingInCycle + todayActualSpent;
     const remainingAfterToday = Math.max(0, spendablePool - totalSpentThroughToday);
     const daysAfterToday = Math.max(1, daysRemaining - 1);
@@ -137,11 +179,14 @@ export class SpendingCalculator {
     todayAllowance: number,
     todayActualSpent: number,
     salaryCycleSummary?: SalaryCycleSummary | null,
-    currencySymbol: string = 'GH₵'
+    currencySymbol: string = 'GH₵',
+    hasSavingsGoal: boolean = true
   ): SpendingMood {
     const spentRatio = todayAllowance > 0 ? todayActualSpent / todayAllowance : 0;
     const isSignificantlyAhead =
       salaryCycleSummary != null &&
+      hasSavingsGoal &&
+      salaryCycleSummary.savingsGoal > 0 &&
       salaryCycleSummary.projectedSavings >= salaryCycleSummary.savingsGoal * 1.03 &&
       salaryCycleSummary.daysRemaining > 0;
 
@@ -152,9 +197,9 @@ export class SpendingCalculator {
         type: 'OVER_BUDGET',
         emoji: '😟',
         headline: "You've gone over today's limit.",
-        message: `You're ${currencySymbol}${this.formatExactDecimal(
-          overAmount
-        )} over today. We'll adjust tomorrow to protect your savings.`,
+        message: hasSavingsGoal && (salaryCycleSummary?.savingsGoal || 0) > 0
+          ? `You're ${currencySymbol}${this.formatExactDecimal(overAmount)} over today. We'll adjust tomorrow to protect your savings.`
+          : `You're ${currencySymbol}${this.formatExactDecimal(overAmount)} over today. We'll adjust tomorrow to keep your budget on track.`,
         badgeLabel: 'Over Budget',
         spentPctOfAllowance: spentRatio,
       };
@@ -221,12 +266,13 @@ export class SpendingCalculator {
   }
 
   /**
-   * Generates a complete salary cycle summary.
+   * Generates a complete budget cycle summary.
    */
   static calculateSalaryCycleSummary(
     profile: BudgetProfile,
     expenses: ExpenseItem[],
-    todayStr: string
+    todayStr: string,
+    additionalMoney: AdditionalMoneyItem[] = []
   ): SalaryCycleSummary {
     const totalCycleDays = this.calculateCycleDays(
       profile.salaryDateString,
@@ -236,10 +282,27 @@ export class SpendingCalculator {
     const daysRemaining = this.calculateDaysRemaining(todayStr, profile.nextSalaryDateString);
     const cycleProgressPct = Math.min(100, Math.round((daysPassed / totalCycleDays) * 100));
 
+    const hasSavings = profile.hasSavingsGoal !== false;
+    const additionalMoneyUpToToday = this.calculateAdditionalMoneyUpToDate(
+      additionalMoney,
+      profile.salaryDateString,
+      todayStr
+    );
+    const totalAdditionalMoneyInCycle = (additionalMoney || [])
+      .filter(
+        (m) =>
+          m.dateString >= profile.salaryDateString &&
+          m.dateString <= profile.nextSalaryDateString
+      )
+      .reduce((sum, m) => sum + m.amount, 0);
+
     const spendablePool = this.calculateMonthlySpendable(
       profile.monthlyIncome,
-      profile.monthlySavingsGoal
+      profile.monthlySavingsGoal,
+      hasSavings,
+      additionalMoneyUpToToday
     );
+
     const pastSpending = this.calculatePastSpendingInCycle(
       expenses,
       profile.salaryDateString,
@@ -248,7 +311,11 @@ export class SpendingCalculator {
     const todaySpending = this.calculateTodaySpent(expenses, todayStr);
     const totalSpentSoFar = pastSpending + todaySpending;
     const remainingSpendable = Math.max(0, spendablePool - totalSpentSoFar);
-    const projectedSavings = profile.monthlyIncome - totalSpentSoFar;
+
+    const totalBudget = profile.monthlyIncome + totalAdditionalMoneyInCycle;
+    const projectedSavings = hasSavings
+      ? totalBudget - totalSpentSoFar
+      : 0;
 
     return {
       salaryDate: profile.salaryDateString,
@@ -258,11 +325,12 @@ export class SpendingCalculator {
       daysRemaining,
       cycleProgressPct,
       monthlyIncome: profile.monthlyIncome,
-      savingsGoal: profile.monthlySavingsGoal,
+      savingsGoal: hasSavings ? profile.monthlySavingsGoal : 0,
       spendablePool,
       pastSpending,
       remainingSpendable,
       projectedSavings,
+      additionalMoneyTotal: totalAdditionalMoneyInCycle,
     };
   }
 
@@ -306,11 +374,23 @@ export class SpendingCalculator {
   static calculateGoalProgress(
     profile: BudgetProfile,
     expenses: ExpenseItem[],
-    todayStr: string
+    todayStr: string,
+    additionalMoney: AdditionalMoneyItem[] = []
   ): GoalProgressData {
+    const hasSavings = profile.hasSavingsGoal !== false;
+    const additionalMoneyTotal = (additionalMoney || [])
+      .filter(
+        (m) =>
+          m.dateString >= profile.salaryDateString &&
+          m.dateString <= profile.nextSalaryDateString
+      )
+      .reduce((sum, m) => sum + m.amount, 0);
+
     const spendablePool = this.calculateMonthlySpendable(
       profile.monthlyIncome,
-      profile.monthlySavingsGoal
+      profile.monthlySavingsGoal,
+      hasSavings,
+      additionalMoneyTotal
     );
     const cycleExpenses = expenses
       .filter((e) => !e.isDelayed)
@@ -320,16 +400,16 @@ export class SpendingCalculator {
       );
     const currentCycleSpent = cycleExpenses.reduce((sum, e) => sum + e.amount, 0);
     const remainingPool = Math.max(0, spendablePool - currentCycleSpent);
-    const targetSavedSoFar = profile.monthlySavingsGoal;
-    const projectedEndSavings = profile.monthlyIncome - currentCycleSpent;
+    const targetSavedSoFar = hasSavings ? profile.monthlySavingsGoal : 0;
+    const projectedEndSavings = (profile.monthlyIncome + additionalMoneyTotal) - currentCycleSpent;
     const percentageSaved =
-      profile.monthlySavingsGoal > 0
+      hasSavings && profile.monthlySavingsGoal > 0
         ? Math.min(100, Math.round((projectedEndSavings / profile.monthlySavingsGoal) * 100))
         : 100;
 
     return {
-      monthlyIncome: profile.monthlyIncome,
-      savingsGoal: profile.monthlySavingsGoal,
+      monthlyIncome: profile.monthlyIncome + additionalMoneyTotal,
+      savingsGoal: hasSavings ? profile.monthlySavingsGoal : 0,
       spendablePool,
       currentCycleSpent,
       remainingPool,
@@ -345,17 +425,29 @@ export class SpendingCalculator {
   static calculateDailyPerformance(
     profile: BudgetProfile,
     expenses: ExpenseItem[],
-    todayStr: string
+    todayStr: string,
+    additionalMoney: AdditionalMoneyItem[] = []
   ): DailyPerformanceData {
     const cycleDays = this.calculateCycleDays(
       profile.salaryDateString,
       profile.nextSalaryDateString
     );
+    const hasSavings = profile.hasSavingsGoal !== false;
+    const additionalMoneyTotal = (additionalMoney || [])
+      .filter(
+        (m) =>
+          m.dateString >= profile.salaryDateString &&
+          m.dateString <= profile.nextSalaryDateString
+      )
+      .reduce((sum, m) => sum + m.amount, 0);
+
     const dailyBaseAllowance = this.calculateDailyAllowance(
       profile.monthlyIncome,
       profile.monthlySavingsGoal,
       0,
-      cycleDays
+      cycleDays,
+      hasSavings,
+      additionalMoneyTotal
     );
 
     const startDate = this.parseDate(profile.salaryDateString);
@@ -417,7 +509,8 @@ export class SpendingCalculator {
   static calculateMonthlyFinancialSummary(
     profile: BudgetProfile,
     expenses: ExpenseItem[],
-    todayStr: string
+    todayStr: string,
+    additionalMoney: AdditionalMoneyItem[] = []
   ): MonthlyFinancialSummaryData {
     const cycleExpenses = expenses
       .filter((e) => !e.isDelayed)
@@ -450,11 +543,22 @@ export class SpendingCalculator {
       profile.salaryDateString,
       profile.nextSalaryDateString
     );
+    const hasSavings = profile.hasSavingsGoal !== false;
+    const additionalMoneyTotal = (additionalMoney || [])
+      .filter(
+        (m) =>
+          m.dateString >= profile.salaryDateString &&
+          m.dateString <= profile.nextSalaryDateString
+      )
+      .reduce((sum, m) => sum + m.amount, 0);
+
     const dailyAllowance = this.calculateDailyAllowance(
       profile.monthlyIncome,
       profile.monthlySavingsGoal,
       0,
-      totalCycleDays
+      totalCycleDays,
+      hasSavings,
+      additionalMoneyTotal
     );
     let daysUnderBudget = 0;
     for (const amt of dayMap.values()) {

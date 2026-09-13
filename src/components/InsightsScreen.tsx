@@ -33,7 +33,13 @@ export const InsightsScreen: React.FC = () => {
     );
   }, [expenses, profile, todayDateString]);
 
-  const cycleSpendable = salaryCycleSummary?.spendablePool ?? Math.max(0, profile.monthlyIncome - profile.monthlySavingsGoal);
+  const cycleSpendable =
+    salaryCycleSummary?.spendablePool ??
+    SpendingCalculator.calculateMonthlySpendable(
+      profile.monthlyIncome,
+      profile.monthlySavingsGoal,
+      profile.hasSavingsGoal !== false
+    );
   const cycleSpent = cycleExpenses.reduce((sum, e) => sum + e.amount, 0);
 
   const cycleDaysTotal = salaryCycleSummary?.totalCycleDays ?? 30;
@@ -78,11 +84,13 @@ export const InsightsScreen: React.FC = () => {
   }, [last7DaysTrend, todayAllowance]);
 
   // Projected savings at payday
-  const projectedSavingsAtPayday = Math.max(
-    0,
-    profile.monthlyIncome - cycleSpent
-  );
-  const isSavingsProtected = projectedSavingsAtPayday >= profile.monthlySavingsGoal;
+  const projectedSavingsAtPayday =
+    salaryCycleSummary?.projectedSavings ??
+    Math.max(0, profile.monthlyIncome - cycleSpent);
+  const hasSavingsGoal = profile.hasSavingsGoal ?? true;
+  const isSavingsProtected = hasSavingsGoal
+    ? projectedSavingsAtPayday >= profile.monthlySavingsGoal
+    : true;
 
   // Categories breakdown
   const categoryBreakdown = useMemo(() => {
@@ -162,6 +170,16 @@ export const InsightsScreen: React.FC = () => {
             </div>
           </div>
 
+          {/* Extra Money Banner if any */}
+          {Boolean(salaryCycleSummary?.additionalMoneyTotal && salaryCycleSummary.additionalMoneyTotal > 0) && (
+            <div className="flex items-center justify-between text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1.5 rounded-xl border border-emerald-200/60 dark:border-emerald-900/40">
+              <span>Extra money added this cycle</span>
+              <span className="font-bold">
+                +{currencySymbol}{SpendingCalculator.formatExactDecimal(salaryCycleSummary!.additionalMoneyTotal)}
+              </span>
+            </div>
+          )}
+
           {/* 3 Stats Columns */}
           <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
             <div className="min-w-0">
@@ -182,9 +200,11 @@ export const InsightsScreen: React.FC = () => {
               </span>
               <span
                 className="text-xs sm:text-sm font-black text-[#1E1B4B] dark:text-white block truncate tabular-nums"
-                title={`${currencySymbol}${SpendingCalculator.formatExactDecimal(profile.monthlySavingsGoal)}`}
+                title={hasSavingsGoal ? `${currencySymbol}${SpendingCalculator.formatExactDecimal(profile.monthlySavingsGoal)}` : 'No savings goal'}
               >
-                {currencySymbol}{SpendingCalculator.formatExactDecimal(profile.monthlySavingsGoal)}
+                {hasSavingsGoal
+                  ? `${currencySymbol}${SpendingCalculator.formatExactDecimal(profile.monthlySavingsGoal)}`
+                  : 'None'}
               </span>
             </div>
 
@@ -220,7 +240,7 @@ export const InsightsScreen: React.FC = () => {
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <h3 className="text-sm font-bold text-[#1E1B4B] dark:text-white">
-                Savings Projection
+                {hasSavingsGoal ? 'Savings Projection' : 'Projected Budget Remaining'}
               </h3>
             </div>
 
@@ -234,7 +254,9 @@ export const InsightsScreen: React.FC = () => {
               {currencySymbol}{SpendingCalculator.formatExactDecimal(projectedSavingsAtPayday)}
             </span>
             <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-0.5">
-              On track to meet your target of {currencySymbol}{SpendingCalculator.formatExactDecimal(profile.monthlySavingsGoal)}
+              {hasSavingsGoal
+                ? `On track to meet your target of ${currencySymbol}${SpendingCalculator.formatExactDecimal(profile.monthlySavingsGoal)}`
+                : `Projected unspent balance by next budget cycle`}
             </p>
           </div>
         </motion.div>

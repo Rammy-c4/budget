@@ -59,14 +59,24 @@ export const CATEGORIES: Record<ExpenseCategory, CategoryMeta> = {
   },
 };
 
+export interface AdditionalMoneyItem {
+  id: number;
+  amount: number;
+  description?: string;
+  dateString: string; // YYYY-MM-DD
+  createdAt: number;
+}
+
 export interface BudgetProfile {
   id?: number;
   userName: string;
   currencySymbol: string;
-  monthlyIncome: number;
-  monthlySavingsGoal: number;
-  salaryDateString: string; // YYYY-MM-DD
-  nextSalaryDateString: string; // YYYY-MM-DD
+  monthlyIncome: number; // Starting budget amount
+  budgetAmount?: number; // Alias for starting budget
+  monthlySavingsGoal: number; // Savings target (0 if None)
+  hasSavingsGoal?: boolean; // false when user selected "None"
+  salaryDateString: string; // Budget start date (YYYY-MM-DD)
+  nextSalaryDateString: string; // Budget end date (YYYY-MM-DD)
   createdAt?: string;
   updatedAt?: string;
 }
@@ -90,11 +100,26 @@ export interface DailySpendingRecord {
   isConfirmedZeroSpend?: boolean;
 }
 
+export interface NotificationPreferences {
+  enabled: boolean;
+  dailyBudgetReminder: boolean;
+  reminderTime: string; // "HH:MM" 24h format, default "20:00" (8:00 PM)
+  expenseReminder: boolean;
+  budgetWarning: boolean;
+}
+
+export interface NotificationRuntimeState {
+  lastDailyReminderDate?: string; // YYYY-MM-DD
+  lastExpenseReminderDate?: string; // YYYY-MM-DD
+  lastBudgetWarningDate?: string; // YYYY-MM-DD
+}
+
 export interface AppPreferences {
   version?: number;
   dailyReminderEnabled: boolean;
   theme: 'light' | 'dark';
   hasCompletedOnboarding: boolean;
+  notifications?: NotificationPreferences;
 }
 
 export interface BudgetBackupData {
@@ -103,6 +128,7 @@ export interface BudgetBackupData {
   exportedAt: string;
   profile: BudgetProfile | null;
   expenses: ExpenseItem[];
+  additionalMoney?: AdditionalMoneyItem[];
   preferences: AppPreferences;
   confirmedZeroDays: string[];
 }
@@ -136,6 +162,7 @@ export interface SalaryCycleSummary {
   pastSpending: number;
   remainingSpendable: number;
   projectedSavings: number;
+  additionalMoneyTotal?: number;
 }
 
 export interface CategoryBreakdownItem {

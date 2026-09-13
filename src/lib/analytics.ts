@@ -22,7 +22,10 @@ export type GenericFeatureAction =
   | 'open_delayed_expenses'
   | 'export_backup'
   | 'import_backup'
-  | 'theme_toggle';
+  | 'theme_toggle'
+  | 'notifications_settings_opened'
+  | 'notifications_enabled'
+  | 'notification_preference_changed';
 
 /**
  * Resolves the active GA4 Measurement ID exclusively from VITE_GA_MEASUREMENT_ID.
