@@ -1,4 +1,4 @@
-const CACHE_NAME = 'local-budget-v3';
+const CACHE_NAME = 'local-budget-v4';
 
 self.addEventListener('install', (event) => {
   const scopePath = new URL(self.registration.scope).pathname;

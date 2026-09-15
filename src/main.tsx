@@ -20,10 +20,19 @@ if ('serviceWorker' in navigator) {
       .register(swUrl)
       .then((reg) => {
         console.log('Local Budget SW registered:', reg.scope);
+        reg.update().catch(() => {});
       })
       .catch((err) => {
         console.log('Local Budget SW registration failed:', err);
       });
+  });
+
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) {
+      refreshing = true;
+      window.location.reload();
+    }
   });
 }
 
