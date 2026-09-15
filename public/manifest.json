@@ -1,5 +1,5 @@
 {
-  "id": "/budget/",
+  "id": "/",
   "name": "Local Budget",
   "short_name": "LocalBudget",
   "description": "An iOS-friendly web/PWA spend tracker designed to keep your daily spending on track, calculate allowances, and safeguard your savings goals.",

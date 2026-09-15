@@ -5,7 +5,6 @@ import { SetupScreen } from './components/SetupScreen';
 import { HomeScreen } from './components/HomeScreen';
 import { InsightsScreen } from './components/InsightsScreen';
 import { BottomNavBar } from './components/BottomNavBar';
-import { OfflineIndicator } from './components/OfflineIndicator';
 import { AppOpeningScreen } from './components/AppOpeningScreen';
 import { trackScreenView } from './lib/analytics';
 import { motion, AnimatePresence } from 'motion/react';
@@ -28,8 +27,6 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen min-h-[100dvh] w-full bg-slate-50 dark:bg-slate-950 font-sans selection:bg-indigo-500 selection:text-white transition-colors">
-      <OfflineIndicator />
-
       {/* 1. App Opening Animation */}
       {showOpening && <AppOpeningScreen onComplete={() => setShowOpening(false)} />}
 

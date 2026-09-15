@@ -20,11 +20,9 @@ function formatShortDate(dateStr: string): string {
 export const InsightsScreen: React.FC = () => {
   const { profile, expenses, todayDateString, salaryCycleSummary, todayAllowance } = useBudget();
 
-  if (!profile) return null;
-  const currencySymbol = profile.currencySymbol;
-
   // Active non-delayed expenses for this salary cycle
   const cycleExpenses = useMemo(() => {
+    if (!profile) return [];
     return expenses.filter(
       (e) =>
         !e.isDelayed &&
@@ -32,18 +30,6 @@ export const InsightsScreen: React.FC = () => {
         e.dateString <= todayDateString
     );
   }, [expenses, profile, todayDateString]);
-
-  const cycleSpendable =
-    salaryCycleSummary?.spendablePool ??
-    SpendingCalculator.calculateMonthlySpendable(
-      profile.monthlyIncome,
-      profile.monthlySavingsGoal,
-      profile.hasSavingsGoal !== false
-    );
-  const cycleSpent = cycleExpenses.reduce((sum, e) => sum + e.amount, 0);
-
-  const cycleDaysTotal = salaryCycleSummary?.totalCycleDays ?? 30;
-  const cycleDaysPassed = salaryCycleSummary?.daysPassed ?? 1;
 
   // Last 7 days trend bar data
   const last7DaysTrend = useMemo(() => {
@@ -76,12 +62,32 @@ export const InsightsScreen: React.FC = () => {
     return last7DaysTrend.reduce((sum, d) => sum + d.spent, 0);
   }, [last7DaysTrend]);
 
-  const dailyAvgSpent = Math.round((total7DaysSpent / 7) * 100) / 100;
-
   const maxTrendSpend = useMemo(() => {
     const max = Math.max(...last7DaysTrend.map((d) => d.spent), todayAllowance * 1.2, 10);
     return max;
   }, [last7DaysTrend, todayAllowance]);
+
+  // Categories breakdown
+  const categoryBreakdown = useMemo(() => {
+    return SpendingCalculator.calculateCategoryBreakdown(cycleExpenses);
+  }, [cycleExpenses]);
+
+  if (!profile) return null;
+  const currencySymbol = profile.currencySymbol;
+
+  const cycleSpendable =
+    salaryCycleSummary?.spendablePool ??
+    SpendingCalculator.calculateMonthlySpendable(
+      profile.monthlyIncome,
+      profile.monthlySavingsGoal,
+      profile.hasSavingsGoal !== false
+    );
+  const cycleSpent = cycleExpenses.reduce((sum, e) => sum + e.amount, 0);
+
+  const cycleDaysTotal = salaryCycleSummary?.totalCycleDays ?? 30;
+  const cycleDaysPassed = salaryCycleSummary?.daysPassed ?? 1;
+
+  const dailyAvgSpent = Math.round((total7DaysSpent / 7) * 100) / 100;
 
   // Projected savings at payday
   const projectedSavingsAtPayday =
@@ -91,11 +97,6 @@ export const InsightsScreen: React.FC = () => {
   const isSavingsProtected = hasSavingsGoal
     ? projectedSavingsAtPayday >= profile.monthlySavingsGoal
     : true;
-
-  // Categories breakdown
-  const categoryBreakdown = useMemo(() => {
-    return SpendingCalculator.calculateCategoryBreakdown(cycleExpenses);
-  }, [cycleExpenses]);
 
   const cycleSpentPct = cycleSpendable > 0 ? Math.min(100, Math.round((cycleSpent / cycleSpendable) * 100)) : 0;
 
