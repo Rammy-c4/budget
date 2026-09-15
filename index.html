@@ -73,6 +73,43 @@
         }
       })();
     </script>
+    <script>
+      (function () {
+        if (!('serviceWorker' in navigator)) return;
+
+        var basePath = window.location.pathname.startsWith('/budget/')
+          ? '/budget/'
+          : '/';
+        var swUrl = basePath + 'sw.js';
+
+        var registerSW = function () {
+          navigator.serviceWorker
+            .register(swUrl, { scope: basePath })
+            .then(function (reg) {
+              console.log('Local Budget SW registered:', reg.scope);
+              reg.update().catch(function () {});
+            })
+            .catch(function (err) {
+              console.log('Local Budget SW registration failed:', err);
+            });
+        };
+
+        if (document.readyState === 'complete') {
+          registerSW();
+        } else {
+          window.addEventListener('load', registerSW);
+        }
+
+        var hadController = !!navigator.serviceWorker.controller;
+        var refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', function () {
+          if (!refreshing && hadController) {
+            refreshing = true;
+            window.location.reload();
+          }
+        });
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
