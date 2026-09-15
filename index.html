@@ -77,9 +77,9 @@
       (function () {
         if (!('serviceWorker' in navigator)) return;
 
-        var basePath = window.location.pathname.startsWith('/budget/')
+        var basePath = (window.location.pathname.startsWith('/budget') || '%BASE_URL%' === '/budget/')
           ? '/budget/'
-          : '/';
+          : '%BASE_URL%';
         var swUrl = basePath + 'sw.js';
 
         var registerSW = function () {
